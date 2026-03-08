@@ -23,18 +23,18 @@ export enum InvoiceStatus {
 @Unique(['clientMappingId', 'periodYear', 'periodMonth'])
 export class InvoiceLog {
   @ApiProperty({
-    description: 'Unique identifier (UUID)',
-    example: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
+    description: 'Unique identifier',
+    example: 1,
   })
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+  @PrimaryGeneratedColumn('increment')
+  id!: number;
 
   @ApiProperty({
-    description: 'Client mapping UUID',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    description: 'Client mapping ID',
+    example: 1,
   })
-  @Column({ type: 'uuid', nullable: false })
-  clientMappingId!: string;
+  @Column({ type: 'int', nullable: false })
+  clientMappingId!: number;
 
   @ApiProperty({ description: 'Period year', example: 2026 })
   @Column({ type: 'smallint', nullable: false })

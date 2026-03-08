@@ -38,7 +38,7 @@ const FAKE_WORKSPACE_ID = '1234567';
 function createServiceConfigs(): Partial<ServiceConfig>[] {
   return [
     {
-      id: 'uuid-1',
+      id: 1,
       serviceName: 'toggl',
       configKey: 'api_token',
       isSecret: true,
@@ -48,7 +48,7 @@ function createServiceConfigs(): Partial<ServiceConfig>[] {
       plainValue: null,
     },
     {
-      id: 'uuid-2',
+      id: 2,
       serviceName: 'toggl',
       configKey: 'workspace_id',
       isSecret: false,
@@ -379,7 +379,7 @@ describe('TogglClientService', () => {
   it('should throw when api_token encrypted fields are missing', async () => {
     repoMock.find.mockResolvedValue([
       {
-        id: 'uuid-1',
+        id: 1,
         serviceName: 'toggl',
         configKey: 'api_token',
         isSecret: true,
@@ -389,7 +389,7 @@ describe('TogglClientService', () => {
         plainValue: null,
       },
       {
-        id: 'uuid-2',
+        id: 2,
         serviceName: 'toggl',
         configKey: 'workspace_id',
         isSecret: false,

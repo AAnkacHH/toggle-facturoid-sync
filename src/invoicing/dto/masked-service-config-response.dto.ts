@@ -2,10 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class MaskedServiceConfigResponseDto {
   @ApiProperty({
-    description: 'Unique identifier (UUID)',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    description: 'Unique identifier',
+    example: 1,
   })
-  id!: string;
+  id!: number;
 
   @ApiProperty({
     description: 'Name of the external service (e.g. toggl, fakturoid)',

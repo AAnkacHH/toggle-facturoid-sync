@@ -176,8 +176,8 @@ export class InvoicingController {
   @ApiQuery({
     name: 'clientMappingId',
     required: false,
-    description: 'Filter by client mapping UUID',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    description: 'Filter by client mapping ID',
+    example: '1',
   })
   @ApiResponse({
     status: 200,
@@ -199,7 +199,7 @@ export class InvoicingController {
       where.periodMonth = parseInt(month, 10);
     }
     if (clientMappingId) {
-      where.clientMappingId = clientMappingId;
+      where.clientMappingId = parseInt(clientMappingId, 10);
     }
 
     return this.timeReportRepo.find({ where });
@@ -233,8 +233,8 @@ export class InvoicingController {
   @ApiQuery({
     name: 'clientMappingId',
     required: false,
-    description: 'Filter by client mapping UUID',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    description: 'Filter by client mapping ID',
+    example: '1',
   })
   @ApiResponse({
     status: 200,
@@ -267,7 +267,7 @@ export class InvoicingController {
       }
     }
     if (clientMappingId) {
-      where.clientMappingId = clientMappingId;
+      where.clientMappingId = parseInt(clientMappingId, 10);
     }
 
     return this.invoiceLogRepo.find({ where });
@@ -279,8 +279,8 @@ export class InvoicingController {
   })
   @ApiParam({
     name: 'id',
-    description: 'UUID of the invoice log',
-    example: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
+    description: 'ID of the invoice log',
+    example: 1,
   })
   @ApiResponse({
     status: 200,
@@ -289,7 +289,9 @@ export class InvoicingController {
   })
   @ApiResponse({ status: 404, description: 'Invoice log not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getInvoiceLog(@Param('id') id: string): Promise<InvoiceLog> {
+  async getInvoiceLog(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<InvoiceLog> {
     const log = await this.invoiceLogRepo.findOne({ where: { id } });
     if (!log) {
       throw new NotFoundException(`InvoiceLog with id="${id}" not found`);

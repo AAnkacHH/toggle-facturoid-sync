@@ -109,7 +109,7 @@ Create a new configuration entry.
 
 ```json
 {
-  "id": "uuid-here",
+  "id": 1,
   "serviceName": "toggl",
   "configKey": "api_token",
   "isSecret": true,
@@ -130,7 +130,7 @@ List all configuration entries. Secret values are masked as `"******"`.
 ```json
 [
   {
-    "id": "uuid-1",
+    "id": 1,
     "serviceName": "toggl",
     "configKey": "api_token",
     "isSecret": true,
@@ -139,7 +139,7 @@ List all configuration entries. Secret values are masked as `"******"`.
     "updatedAt": "2026-01-15T10:00:00.000Z"
   },
   {
-    "id": "uuid-2",
+    "id": 2,
     "serviceName": "toggl",
     "configKey": "workspace_id",
     "isSecret": false,
@@ -240,7 +240,7 @@ Create a new client mapping.
 
 ```json
 {
-  "id": "uuid-here",
+  "id": 1,
   "name": "Acme Corp",
   "togglClientId": "12345678",
   "togglWorkspaceId": "9876543",
@@ -332,7 +332,7 @@ Duplicate protection is built in: clients with an existing invoice (status: crea
 [
   {
     "clientName": "Acme Corp",
-    "clientMappingId": "uuid-1",
+    "clientMappingId": 1,
     "status": "created",
     "fakturoidInvoiceId": 12345,
     "fakturoidNumber": "2026-0003",
@@ -341,12 +341,12 @@ Duplicate protection is built in: clients with an existing invoice (status: crea
   },
   {
     "clientName": "Beta Inc",
-    "clientMappingId": "uuid-2",
+    "clientMappingId": 2,
     "status": "skipped_duplicate"
   },
   {
     "clientName": "Gamma Ltd",
-    "clientMappingId": "uuid-3",
+    "clientMappingId": 3,
     "status": "skipped_zero_hours",
     "totalHours": 0
   }
@@ -483,7 +483,7 @@ List time reports stored in the database.
 |-------------------|--------|-----------------------------------|
 | `year`            | string | Filter by period year             |
 | `month`           | string | Filter by period month            |
-| `clientMappingId` | string | Filter by client mapping UUID     |
+| `clientMappingId` | string | Filter by client mapping ID       |
 
 **Response (200):** Array of `TimeReport` objects.
 
@@ -500,7 +500,7 @@ List invoice log entries.
 | `year`            | string | Filter by period year                                          |
 | `month`           | string | Filter by period month                                         |
 | `status`          | string | Filter by status: `pending`, `created`, `sent`, `paid`, `error`|
-| `clientMappingId` | string | Filter by client mapping UUID                                  |
+| `clientMappingId` | string | Filter by client mapping ID                                    |
 
 **Response (200):** Array of `InvoiceLog` objects.
 

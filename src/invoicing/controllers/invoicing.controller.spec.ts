@@ -17,8 +17,8 @@ import {
 
 function createTimeReport(overrides: Partial<TimeReport> = {}): TimeReport {
   return {
-    id: 'tr-uuid-1',
-    clientMappingId: 'mapping-uuid-1',
+    id: 1,
+    clientMappingId: 1,
     periodYear: 2026,
     periodMonth: 2,
     togglProjectId: '201',
@@ -36,8 +36,8 @@ function createTimeReport(overrides: Partial<TimeReport> = {}): TimeReport {
 
 function createInvoiceLog(overrides: Partial<InvoiceLog> = {}): InvoiceLog {
   return {
-    id: 'log-uuid-1',
-    clientMappingId: 'mapping-uuid-1',
+    id: 1,
+    clientMappingId: 1,
     periodYear: 2026,
     periodMonth: 2,
     fakturoidInvoiceId: '12345',
@@ -125,7 +125,7 @@ describe('InvoicingController', () => {
       const results: InvoiceGenerationResult[] = [
         {
           clientName: 'Acme Corp',
-          clientMappingId: 'mapping-uuid-1',
+          clientMappingId: 1,
           status: 'created',
           fakturoidInvoiceId: 12345,
           fakturoidNumber: '2026-0001',
@@ -232,7 +232,17 @@ describe('InvoicingController', () => {
 
   describe('getFakturoidSubjects', () => {
     it('should return fakturoid subjects', async () => {
-      const subjects = [{ id: 1, name: 'Subject A', email: null }];
+      const subjects = [
+        {
+          id: 1,
+          name: 'Subject A',
+          email: null,
+          street: null,
+          city: null,
+          country: null,
+          registration_no: null,
+        },
+      ];
       invoicingService.getFakturoidSlug.mockResolvedValue('test-account');
       fakturoidClient.getSubjects.mockResolvedValue(subjects);
 
@@ -271,15 +281,11 @@ describe('InvoicingController', () => {
       const reports = [createTimeReport()];
       timeReportRepo.find.mockResolvedValue(reports);
 
-      const result = await controller.getTimeReports(
-        undefined,
-        undefined,
-        'mapping-uuid-1',
-      );
+      const result = await controller.getTimeReports(undefined, undefined, '1');
 
       expect(result).toHaveLength(1);
       expect(timeReportRepo.find).toHaveBeenCalledWith({
-        where: { clientMappingId: 'mapping-uuid-1' },
+        where: { clientMappingId: 1 },
       });
     });
   });
@@ -325,12 +331,12 @@ describe('InvoicingController', () => {
         undefined,
         undefined,
         undefined,
-        'mapping-uuid-1',
+        '1',
       );
 
       expect(result).toHaveLength(1);
       expect(invoiceLogRepo.find).toHaveBeenCalledWith({
-        where: { clientMappingId: 'mapping-uuid-1' },
+        where: { clientMappingId: 1 },
       });
     });
   });
@@ -340,18 +346,18 @@ describe('InvoicingController', () => {
       const log = createInvoiceLog();
       invoiceLogRepo.findOne.mockResolvedValue(log);
 
-      const result = await controller.getInvoiceLog('log-uuid-1');
+      const result = await controller.getInvoiceLog(1);
 
       expect(result).toEqual(log);
       expect(invoiceLogRepo.findOne).toHaveBeenCalledWith({
-        where: { id: 'log-uuid-1' },
+        where: { id: 1 },
       });
     });
 
     it('should throw NotFoundException for missing ID', async () => {
       invoiceLogRepo.findOne.mockResolvedValue(null);
 
-      await expect(controller.getInvoiceLog('nonexistent')).rejects.toThrow(
+      await expect(controller.getInvoiceLog(999)).rejects.toThrow(
         NotFoundException,
       );
     });

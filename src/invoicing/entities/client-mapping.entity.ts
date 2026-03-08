@@ -13,11 +13,11 @@ import { InvoiceLog } from './invoice-log.entity';
 @Entity('client_mapping')
 export class ClientMapping {
   @ApiProperty({
-    description: 'Unique identifier (UUID)',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    description: 'Unique identifier',
+    example: 1,
   })
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+  @PrimaryGeneratedColumn('increment')
+  id!: number;
 
   @ApiProperty({
     description: 'Display name for the mapping',

@@ -11,7 +11,7 @@ function createMaskedConfig(
   overrides: Partial<MaskedServiceConfig> = {},
 ): MaskedServiceConfig {
   return {
-    id: 'cfg-uuid-1',
+    id: 1,
     serviceName: 'toggl',
     configKey: 'api_token',
     isSecret: true,
@@ -118,7 +118,7 @@ describe('ServiceConfigController', () => {
       const configs = [
         createMaskedConfig(),
         createMaskedConfig({
-          id: 'cfg-uuid-2',
+          id: 2,
           configKey: 'slug',
           isSecret: false,
           value: 'my-account',
@@ -139,10 +139,10 @@ describe('ServiceConfigController', () => {
       const masked = createMaskedConfig();
       service.findOne.mockResolvedValue(masked);
 
-      const result = await controller.findOne('cfg-uuid-1');
+      const result = await controller.findOne(1);
 
       expect(result).toEqual(masked);
-      expect(service.findOne).toHaveBeenCalledWith('cfg-uuid-1');
+      expect(service.findOne).toHaveBeenCalledWith(1);
     });
 
     it('should throw NotFoundException for missing ID', async () => {
@@ -150,9 +150,7 @@ describe('ServiceConfigController', () => {
         new NotFoundException('ServiceConfig with id="nonexistent" not found'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(controller.findOne(999)).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -173,12 +171,12 @@ describe('ServiceConfigController', () => {
       const masked = createMaskedConfig({ configKey: 'updated_key' });
       service.update.mockResolvedValue(masked);
 
-      const result = await controller.update('cfg-uuid-1', {
+      const result = await controller.update(1, {
         configKey: 'updated_key',
       });
 
       expect(result.configKey).toBe('updated_key');
-      expect(service.update).toHaveBeenCalledWith('cfg-uuid-1', {
+      expect(service.update).toHaveBeenCalledWith(1, {
         configKey: 'updated_key',
       });
     });
@@ -188,9 +186,9 @@ describe('ServiceConfigController', () => {
     it('should remove a config', async () => {
       service.remove.mockResolvedValue(undefined);
 
-      await controller.remove('cfg-uuid-1');
+      await controller.remove(1);
 
-      expect(service.remove).toHaveBeenCalledWith('cfg-uuid-1');
+      expect(service.remove).toHaveBeenCalledWith(1);
     });
 
     it('should throw NotFoundException for missing ID', async () => {
@@ -198,9 +196,7 @@ describe('ServiceConfigController', () => {
         new NotFoundException('ServiceConfig with id="nonexistent" not found'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(controller.remove(999)).rejects.toThrow(NotFoundException);
     });
   });
 });

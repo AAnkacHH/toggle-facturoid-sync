@@ -4,7 +4,7 @@
 
 export interface InvoiceGenerationResult {
   clientName: string;
-  clientMappingId: string;
+  clientMappingId: number;
   status: 'created' | 'skipped_zero_hours' | 'skipped_duplicate' | 'error';
   fakturoidInvoiceId?: number;
   fakturoidNumber?: string;

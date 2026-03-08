@@ -50,7 +50,7 @@ export class ClientMappingService {
     return this.repo.find();
   }
 
-  async findOne(id: string): Promise<ClientMapping> {
+  async findOne(id: number): Promise<ClientMapping> {
     const mapping = await this.repo.findOne({ where: { id } });
     if (!mapping) {
       throw new NotFoundException(`ClientMapping with id="${id}" not found`);
@@ -59,7 +59,7 @@ export class ClientMappingService {
   }
 
   async update(
-    id: string,
+    id: number,
     dto: UpdateClientMappingDto,
   ): Promise<ClientMapping> {
     const mapping = await this.findOne(id);
@@ -89,7 +89,7 @@ export class ClientMappingService {
     return this.repo.save(mapping);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: number): Promise<void> {
     const mapping = await this.findOne(id);
     await this.repo.remove(mapping);
   }

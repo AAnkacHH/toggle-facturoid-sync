@@ -10,8 +10,8 @@ import {
 @Entity('service_config')
 @Unique(['serviceName', 'configKey'])
 export class ServiceConfig {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+  @PrimaryGeneratedColumn('increment')
+  id!: number;
 
   @Column({ type: 'varchar', length: 100, nullable: false })
   serviceName!: string;

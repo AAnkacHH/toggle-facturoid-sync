@@ -18,7 +18,7 @@ function createClientMapping(
   overrides: Partial<ClientMapping> = {},
 ): ClientMapping {
   return {
-    id: 'mapping-uuid-1',
+    id: 1,
     name: 'Acme Corp',
     togglClientId: '100',
     togglWorkspaceId: '999',
@@ -36,7 +36,7 @@ function createClientMapping(
 
 function createSecondClientMapping(): ClientMapping {
   return createClientMapping({
-    id: 'mapping-uuid-2',
+    id: 2,
     name: 'Beta Inc',
     togglClientId: '200',
     fakturoidSubjectId: '501',
@@ -79,8 +79,8 @@ function createTogglSummaries(): TogglMonthSummary[] {
 
 function createTimeReport(overrides: Partial<TimeReport> = {}): TimeReport {
   return {
-    id: 'tr-uuid-1',
-    clientMappingId: 'mapping-uuid-1',
+    id: 1,
+    clientMappingId: 1,
     periodYear: 2026,
     periodMonth: 2,
     togglProjectId: '201',
@@ -98,8 +98,8 @@ function createTimeReport(overrides: Partial<TimeReport> = {}): TimeReport {
 
 function createInvoiceLog(overrides: Partial<InvoiceLog> = {}): InvoiceLog {
   return {
-    id: 'log-uuid-1',
-    clientMappingId: 'mapping-uuid-1',
+    id: 1,
+    clientMappingId: 1,
     periodYear: 2026,
     periodMonth: 2,
     fakturoidInvoiceId: null,
@@ -131,7 +131,7 @@ function createFakturoidResponse(
 
 function createSlugConfig(): ServiceConfig {
   return {
-    id: 'config-uuid-slug',
+    id: 100,
     serviceName: 'fakturoid',
     configKey: 'slug',
     plainValue: 'test-account',
@@ -234,7 +234,7 @@ describe('InvoicingService', () => {
       togglClient.getMonthSummary.mockResolvedValue(createTogglSummaries());
       timeReportRepo.findOne.mockResolvedValue(null);
       timeReportRepo.create.mockImplementation(
-        (data) => ({ ...data, id: 'new-tr-uuid' }) as TimeReport,
+        (data) => ({ ...data, id: 10 }) as TimeReport,
       );
       timeReportRepo.save.mockImplementation(
         async (entity) => entity as TimeReport,
@@ -250,7 +250,7 @@ describe('InvoicingService', () => {
       // Verify first project data
       const firstCreateCall = timeReportRepo.create.mock
         .calls[0][0] as Partial<TimeReport>;
-      expect(firstCreateCall.clientMappingId).toBe('mapping-uuid-1');
+      expect(firstCreateCall.clientMappingId).toBe(1);
       expect(firstCreateCall.togglProjectId).toBe('201');
       expect(firstCreateCall.projectName).toBe('Project Alpha');
       expect(firstCreateCall.totalSeconds).toBe(7200);
@@ -261,7 +261,7 @@ describe('InvoicingService', () => {
     it('should upsert existing time reports (update, not duplicate)', async () => {
       const mapping = createClientMapping();
       const existingReport = createTimeReport({
-        id: 'existing-tr-uuid',
+        id: 5,
         totalHours: '1.50',
         amount: '2250.00',
       });
@@ -293,7 +293,7 @@ describe('InvoicingService', () => {
 
       // Verify the existing report was updated
       const savedEntity = timeReportRepo.save.mock.calls[0][0] as TimeReport;
-      expect(savedEntity.id).toBe('existing-tr-uuid');
+      expect(savedEntity.id).toBe(5);
       expect(savedEntity.projectName).toBe('Project Alpha Updated');
       expect(savedEntity.totalSeconds).toBe(7200);
     });
@@ -327,7 +327,7 @@ describe('InvoicingService', () => {
       const timeReports = [
         createTimeReport({ totalHours: '2.00', amount: '3000.00' }),
         createTimeReport({
-          id: 'tr-uuid-2',
+          id: 2,
           togglProjectId: '202',
           projectName: 'Project Beta',
           totalHours: '1.50',
@@ -340,7 +340,7 @@ describe('InvoicingService', () => {
       togglClient.getMonthSummary.mockResolvedValue(createTogglSummaries());
       timeReportRepo.findOne.mockResolvedValue(null);
       timeReportRepo.create.mockImplementation(
-        (data) => ({ ...data, id: 'new-uuid' }) as TimeReport,
+        (data) => ({ ...data, id: 10 }) as TimeReport,
       );
       timeReportRepo.save.mockImplementation(
         async (entity) => entity as TimeReport,
@@ -350,7 +350,7 @@ describe('InvoicingService', () => {
       invoiceLogRepo.findOne.mockResolvedValue(null); // no duplicate
       timeReportRepo.find.mockResolvedValue(timeReports);
       invoiceLogRepo.create.mockImplementation(
-        (data) => ({ ...data, id: 'log-uuid-new' }) as InvoiceLog,
+        (data) => ({ ...data, id: 10 }) as InvoiceLog,
       );
       invoiceLogRepo.save.mockImplementation(
         async (entity) => entity as InvoiceLog,
@@ -437,7 +437,7 @@ describe('InvoicingService', () => {
       togglClient.getMonthSummary.mockResolvedValue(createTogglSummaries());
       timeReportRepo.findOne.mockResolvedValue(null);
       timeReportRepo.create.mockImplementation(
-        (data) => ({ ...data, id: 'new-uuid' }) as TimeReport,
+        (data) => ({ ...data, id: 10 }) as TimeReport,
       );
 
       // Time report save always works
@@ -455,7 +455,7 @@ describe('InvoicingService', () => {
         ])
         .mockResolvedValueOnce([
           createTimeReport({
-            clientMappingId: 'mapping-uuid-2',
+            clientMappingId: 2,
             totalHours: '1.00',
             amount: '2000.00',
           }),
@@ -463,7 +463,7 @@ describe('InvoicingService', () => {
 
       // Invoice log creation
       invoiceLogRepo.create.mockImplementation(
-        (data) => ({ ...data, id: 'log-new' }) as InvoiceLog,
+        (data) => ({ ...data, id: 10 }) as InvoiceLog,
       );
       invoiceLogRepo.save.mockImplementation(
         async (entity) => entity as InvoiceLog,
@@ -503,7 +503,7 @@ describe('InvoicingService', () => {
       togglClient.getMonthSummary.mockResolvedValue(createTogglSummaries());
       timeReportRepo.findOne.mockResolvedValue(null);
       timeReportRepo.create.mockImplementation(
-        (data) => ({ ...data, id: 'new-uuid' }) as TimeReport,
+        (data) => ({ ...data, id: 10 }) as TimeReport,
       );
       timeReportRepo.save.mockImplementation(
         async (entity) => entity as TimeReport,
@@ -514,7 +514,7 @@ describe('InvoicingService', () => {
 
       const saveCalls: InvoiceLog[] = [];
       invoiceLogRepo.create.mockImplementation(
-        (data) => ({ ...data, id: 'log-uuid-pending' }) as InvoiceLog,
+        (data) => ({ ...data, id: 10 }) as InvoiceLog,
       );
       invoiceLogRepo.save.mockImplementation(async (entity) => {
         saveCalls.push({ ...(entity as InvoiceLog) });
@@ -545,7 +545,7 @@ describe('InvoicingService', () => {
       togglClient.getMonthSummary.mockResolvedValue(createTogglSummaries());
       timeReportRepo.findOne.mockResolvedValue(null);
       timeReportRepo.create.mockImplementation(
-        (data) => ({ ...data, id: 'new-uuid' }) as TimeReport,
+        (data) => ({ ...data, id: 10 }) as TimeReport,
       );
       timeReportRepo.save.mockImplementation(
         async (entity) => entity as TimeReport,
@@ -556,7 +556,7 @@ describe('InvoicingService', () => {
 
       const saveCalls: InvoiceLog[] = [];
       invoiceLogRepo.create.mockImplementation(
-        (data) => ({ ...data, id: 'log-uuid-err' }) as InvoiceLog,
+        (data) => ({ ...data, id: 10 }) as InvoiceLog,
       );
       invoiceLogRepo.save.mockImplementation(async (entity) => {
         saveCalls.push({ ...(entity as InvoiceLog) });
@@ -592,7 +592,7 @@ describe('InvoicingService', () => {
           amount: '3000.00',
         }),
         createTimeReport({
-          id: 'tr-uuid-2',
+          id: 2,
           togglProjectId: '202',
           projectName: 'Project Beta',
           totalHours: '1.50',

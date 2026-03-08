@@ -11,7 +11,7 @@ import { CreateServiceConfigDto } from '../dto/create-service-config.dto';
 import { UpdateServiceConfigDto } from '../dto/update-service-config.dto';
 
 export interface MaskedServiceConfig {
-  id: string;
+  id: number;
   serviceName: string;
   configKey: string;
   isSecret: boolean;
@@ -68,7 +68,7 @@ export class ServiceConfigService {
     return configs.map((c) => this.mask(c));
   }
 
-  async findOne(id: string): Promise<MaskedServiceConfig> {
+  async findOne(id: number): Promise<MaskedServiceConfig> {
     const config = await this.repo.findOne({ where: { id } });
     if (!config) {
       throw new NotFoundException(`ServiceConfig with id="${id}" not found`);
@@ -82,7 +82,7 @@ export class ServiceConfigService {
   }
 
   async update(
-    id: string,
+    id: number,
     dto: UpdateServiceConfigDto,
   ): Promise<MaskedServiceConfig> {
     const config = await this.repo.findOne({ where: { id } });
@@ -136,7 +136,7 @@ export class ServiceConfigService {
     return this.mask(saved);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: number): Promise<void> {
     const config = await this.repo.findOne({ where: { id } });
     if (!config) {
       throw new NotFoundException(`ServiceConfig with id="${id}" not found`);

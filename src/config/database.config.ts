@@ -5,11 +5,14 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 export const databaseConfig: TypeOrmModuleAsyncOptions = {
   useFactory: (configService: ConfigService) => {
     const databaseUrl = configService.get<string>('DATABASE_URL');
+    const isSsl = configService.get<string>('DB_SSL') === 'true';
+    const sslConfig = isSsl ? { rejectUnauthorized: false } : false;
 
     if (databaseUrl) {
       return {
         type: 'postgres' as const,
         url: databaseUrl,
+        ssl: sslConfig,
         entities: [__dirname + '/../**/*.entity{.ts,.js}'],
         migrations: [__dirname + '/../migrations/*{.ts,.js}'],
         namingStrategy: new SnakeNamingStrategy(),
@@ -32,6 +35,7 @@ export const databaseConfig: TypeOrmModuleAsyncOptions = {
       database: configService.get<string>('DB_NAME', 'toggl_facturoid'),
       username: configService.get<string>('DB_USER', 'postgres'),
       password,
+      ssl: sslConfig,
       entities: [__dirname + '/../**/*.entity{.ts,.js}'],
       migrations: [__dirname + '/../migrations/*{.ts,.js}'],
       namingStrategy: new SnakeNamingStrategy(),

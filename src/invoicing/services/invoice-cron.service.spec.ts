@@ -72,7 +72,7 @@ describe('InvoiceCronService', () => {
       const mockResults: InvoiceGenerationResult[] = [
         {
           clientName: 'Client A',
-          clientMappingId: 'uuid-1',
+          clientMappingId: 1,
           status: 'created',
           totalHours: 10,
           totalAmount: 500,
@@ -138,13 +138,13 @@ describe('InvoiceCronService', () => {
       const mockResults: InvoiceGenerationResult[] = [
         {
           clientName: 'Client A',
-          clientMappingId: 'uuid-1',
+          clientMappingId: 1,
           status: 'error',
           errorMessage: 'API down',
         },
         {
           clientName: 'Client B',
-          clientMappingId: 'uuid-2',
+          clientMappingId: 2,
           status: 'error',
           errorMessage: 'API down',
         },
@@ -170,19 +170,19 @@ describe('InvoiceCronService', () => {
       const mockResults: InvoiceGenerationResult[] = [
         {
           clientName: 'Client A',
-          clientMappingId: 'uuid-1',
+          clientMappingId: 1,
           status: 'created',
           totalHours: 10,
           totalAmount: 500,
         },
         {
           clientName: 'Client B',
-          clientMappingId: 'uuid-2',
+          clientMappingId: 2,
           status: 'skipped_duplicate',
         },
         {
           clientName: 'Client C',
-          clientMappingId: 'uuid-3',
+          clientMappingId: 3,
           status: 'error',
           errorMessage: 'Failed',
         },
@@ -205,7 +205,7 @@ describe('InvoiceCronService', () => {
       const mockResults: InvoiceGenerationResult[] = [
         {
           clientName: 'Client A',
-          clientMappingId: 'uuid-1',
+          clientMappingId: 1,
           status: 'created',
           totalHours: 20,
           totalAmount: 1000,

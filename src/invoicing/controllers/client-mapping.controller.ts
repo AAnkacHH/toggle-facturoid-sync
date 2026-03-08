@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -74,8 +75,8 @@ export class ClientMappingController {
   })
   @ApiParam({
     name: 'id',
-    description: 'UUID of the client mapping',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    description: 'ID of the client mapping',
+    example: 1,
   })
   @ApiResponse({
     status: 200,
@@ -84,7 +85,7 @@ export class ClientMappingController {
   })
   @ApiResponse({ status: 404, description: 'Client mapping not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  findOne(@Param('id') id: string): Promise<ClientMapping> {
+  findOne(@Param('id', ParseIntPipe) id: number): Promise<ClientMapping> {
     return this.clientMappingService.findOne(id);
   }
 
@@ -95,8 +96,8 @@ export class ClientMappingController {
   })
   @ApiParam({
     name: 'id',
-    description: 'UUID of the client mapping',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    description: 'ID of the client mapping',
+    example: 1,
   })
   @ApiResponse({
     status: 200,
@@ -106,7 +107,7 @@ export class ClientMappingController {
   @ApiResponse({ status: 404, description: 'Client mapping not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   update(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateClientMappingDto,
   ): Promise<ClientMapping> {
     return this.clientMappingService.update(id, dto);
@@ -119,8 +120,8 @@ export class ClientMappingController {
   })
   @ApiParam({
     name: 'id',
-    description: 'UUID of the client mapping',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    description: 'ID of the client mapping',
+    example: 1,
   })
   @ApiResponse({
     status: 204,
@@ -128,7 +129,7 @@ export class ClientMappingController {
   })
   @ApiResponse({ status: 404, description: 'Client mapping not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  remove(@Param('id') id: string): Promise<void> {
+  remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.clientMappingService.remove(id);
   }
 }

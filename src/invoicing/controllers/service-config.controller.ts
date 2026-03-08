@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
 } from '@nestjs/common';
@@ -91,8 +92,8 @@ export class ServiceConfigController {
   })
   @ApiParam({
     name: 'id',
-    description: 'UUID of the service configuration',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    description: 'ID of the service configuration',
+    example: 1,
   })
   @ApiResponse({
     status: 200,
@@ -101,7 +102,7 @@ export class ServiceConfigController {
   })
   @ApiResponse({ status: 404, description: 'Configuration not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.serviceConfigService.findOne(id);
   }
 
@@ -113,8 +114,8 @@ export class ServiceConfigController {
   })
   @ApiParam({
     name: 'id',
-    description: 'UUID of the service configuration',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    description: 'ID of the service configuration',
+    example: 1,
   })
   @ApiResponse({
     status: 200,
@@ -128,7 +129,10 @@ export class ServiceConfigController {
       'Duplicate configuration (serviceName + configKey already exists)',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  update(@Param('id') id: string, @Body() dto: UpdateServiceConfigDto) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateServiceConfigDto,
+  ) {
     return this.serviceConfigService.update(id, dto);
   }
 
@@ -139,8 +143,8 @@ export class ServiceConfigController {
   })
   @ApiParam({
     name: 'id',
-    description: 'UUID of the service configuration',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    description: 'ID of the service configuration',
+    example: 1,
   })
   @ApiResponse({
     status: 204,
@@ -148,7 +152,7 @@ export class ServiceConfigController {
   })
   @ApiResponse({ status: 404, description: 'Configuration not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.serviceConfigService.remove(id);
   }
 }

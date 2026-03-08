@@ -62,7 +62,7 @@ describe('AuthService', () => {
     });
 
     it('should throw ConflictException if secret already configured', async () => {
-      repo.findOne.mockResolvedValue({ id: '1', plainValue: 'salt$hash' });
+      repo.findOne.mockResolvedValue({ id: 1, plainValue: 'salt$hash' });
 
       await expect(service.setup()).rejects.toThrow(ConflictException);
       await expect(service.setup()).rejects.toThrow(
@@ -115,7 +115,7 @@ describe('AuthService', () => {
 
   describe('isSetupComplete', () => {
     it('should return true when secret exists', async () => {
-      repo.findOne.mockResolvedValue({ id: '1' });
+      repo.findOne.mockResolvedValue({ id: 1 });
       const result = await service.isSetupComplete();
       expect(result).toBe(true);
     });

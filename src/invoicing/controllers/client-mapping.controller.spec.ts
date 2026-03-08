@@ -7,7 +7,7 @@ import { ClientMapping } from '../entities/client-mapping.entity';
 
 function createMapping(overrides: Partial<ClientMapping> = {}): ClientMapping {
   return {
-    id: 'map-uuid-1',
+    id: 1,
     name: 'Acme Corp',
     togglClientId: '100',
     togglWorkspaceId: '999',
@@ -126,10 +126,10 @@ describe('ClientMappingController', () => {
       const mapping = createMapping();
       service.findOne.mockResolvedValue(mapping);
 
-      const result = await controller.findOne('map-uuid-1');
+      const result = await controller.findOne(1);
 
       expect(result).toEqual(mapping);
-      expect(service.findOne).toHaveBeenCalledWith('map-uuid-1');
+      expect(service.findOne).toHaveBeenCalledWith(1);
     });
 
     it('should throw NotFoundException for missing ID', async () => {
@@ -137,9 +137,7 @@ describe('ClientMappingController', () => {
         new NotFoundException('ClientMapping with id="nonexistent" not found'),
       );
 
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(controller.findOne(999)).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -148,12 +146,12 @@ describe('ClientMappingController', () => {
       const updatedMapping = createMapping({ name: 'Updated Corp' });
       service.update.mockResolvedValue(updatedMapping);
 
-      const result = await controller.update('map-uuid-1', {
+      const result = await controller.update(1, {
         name: 'Updated Corp',
       });
 
       expect(result.name).toBe('Updated Corp');
-      expect(service.update).toHaveBeenCalledWith('map-uuid-1', {
+      expect(service.update).toHaveBeenCalledWith(1, {
         name: 'Updated Corp',
       });
     });
@@ -163,9 +161,9 @@ describe('ClientMappingController', () => {
         new NotFoundException('ClientMapping with id="nonexistent" not found'),
       );
 
-      await expect(
-        controller.update('nonexistent', { name: 'Updated' }),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.update(999, { name: 'Updated' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw ConflictException when updating to duplicate togglClientId', async () => {
@@ -176,7 +174,7 @@ describe('ClientMappingController', () => {
       );
 
       await expect(
-        controller.update('map-uuid-1', { togglClientId: 200 }),
+        controller.update(1, { togglClientId: 200 }),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -185,9 +183,9 @@ describe('ClientMappingController', () => {
     it('should remove a mapping', async () => {
       service.remove.mockResolvedValue(undefined);
 
-      await controller.remove('map-uuid-1');
+      await controller.remove(1);
 
-      expect(service.remove).toHaveBeenCalledWith('map-uuid-1');
+      expect(service.remove).toHaveBeenCalledWith(1);
     });
 
     it('should throw NotFoundException for missing ID', async () => {
@@ -195,9 +193,7 @@ describe('ClientMappingController', () => {
         new NotFoundException('ClientMapping with id="nonexistent" not found'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(controller.remove(999)).rejects.toThrow(NotFoundException);
     });
   });
 });

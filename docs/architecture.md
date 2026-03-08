@@ -109,7 +109,7 @@ Stores all API credentials and configuration values. Secret values are encrypted
 
 | Column           | Type         | Description                              |
 |------------------|--------------|------------------------------------------|
-| `id`             | UUID (PK)    | Auto-generated                           |
+| `id`             | serial (PK)  | Auto-generated                           |
 | `service_name`   | varchar(100) | Service identifier                       |
 | `config_key`     | varchar(100) | Configuration key                        |
 | `encrypted_value`| bytea        | AES-256-GCM encrypted value (secrets)    |
@@ -128,7 +128,7 @@ Maps Toggl clients to Fakturoid subjects with billing configuration.
 
 | Column                | Type           | Description                          |
 |-----------------------|----------------|--------------------------------------|
-| `id`                  | UUID (PK)      | Auto-generated                       |
+| `id`                  | serial (PK)    | Auto-generated                       |
 | `name`                | varchar(255)   | Display name                         |
 | `toggl_client_id`     | bigint (unique)| Toggl client ID                      |
 | `toggl_workspace_id`  | bigint         | Toggl workspace ID                   |
@@ -145,8 +145,8 @@ Stores pulled time data from Toggl, broken down by project and period.
 
 | Column              | Type          | Description                           |
 |---------------------|---------------|---------------------------------------|
-| `id`                | UUID (PK)     | Auto-generated                        |
-| `client_mapping_id` | UUID (FK)     | Reference to client_mapping           |
+| `id`                | serial (PK)   | Auto-generated                        |
+| `client_mapping_id` | integer (FK)  | Reference to client_mapping           |
 | `period_year`       | smallint      | Year of the billing period            |
 | `period_month`      | smallint      | Month of the billing period           |
 | `toggl_project_id`  | bigint        | Toggl project ID                      |
@@ -166,8 +166,8 @@ Records of created invoices with Fakturoid references and status tracking.
 
 | Column                 | Type          | Description                          |
 |------------------------|---------------|--------------------------------------|
-| `id`                   | UUID (PK)     | Auto-generated                       |
-| `client_mapping_id`    | UUID (FK)     | Reference to client_mapping          |
+| `id`                   | serial (PK)   | Auto-generated                       |
+| `client_mapping_id`    | integer (FK)  | Reference to client_mapping          |
 | `period_year`          | smallint      | Year of the billing period           |
 | `period_month`         | smallint      | Month of the billing period          |
 | `fakturoid_invoice_id` | bigint        | Invoice ID in Fakturoid              |

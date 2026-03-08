@@ -8,10 +8,10 @@ export class InvoiceGenerationResultResponseDto {
   clientName!: string;
 
   @ApiProperty({
-    description: 'UUID of the client mapping',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    description: 'ID of the client mapping',
+    example: 1,
   })
-  clientMappingId!: string;
+  clientMappingId!: number;
 
   @ApiProperty({
     description: 'Result status of the invoice generation',
