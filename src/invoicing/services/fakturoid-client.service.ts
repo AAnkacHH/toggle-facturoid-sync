@@ -1,6 +1,8 @@
 import {
   Injectable,
   Logger,
+  HttpException,
+  HttpStatus,
   InternalServerErrorException,
   UnauthorizedException,
   ForbiddenException,
@@ -20,6 +22,7 @@ import {
 
 const FAKTUROID_BASE_URL = 'https://app.fakturoid.cz/api/v3';
 const TOKEN_REFRESH_BUFFER_SECONDS = 300; // refresh 5 minutes before expiry
+const MAX_RETRIES = 3;
 
 interface HttpErrorResponse {
   isAxiosError?: boolean;
@@ -49,6 +52,7 @@ export class FakturoidClientService {
   private readonly logger = new Logger(FakturoidClientService.name);
   private accessToken: string | null = null;
   private tokenExpiresAt: Date | null = null;
+  private cachedCredentials: FakturoidCredentials | null = null;
 
   constructor(
     @InjectRepository(ServiceConfig)
@@ -57,6 +61,10 @@ export class FakturoidClientService {
   ) {}
 
   private async getCredentials(): Promise<FakturoidCredentials> {
+    if (this.cachedCredentials) {
+      return this.cachedCredentials;
+    }
+
     const configs = await this.serviceConfigRepo.find({
       where: { serviceName: 'fakturoid' },
     });
@@ -131,15 +139,19 @@ export class FakturoidClientService {
       );
     }
 
-    return {
+    this.cachedCredentials = {
       clientId,
       clientSecret,
       slug: slugConfig.plainValue,
       userAgentEmail: emailConfig.plainValue,
     };
+
+    return this.cachedCredentials;
   }
 
-  async authenticate(): Promise<string> {
+  async authenticate(
+    credentials?: FakturoidCredentials,
+  ): Promise<string> {
     // Return cached token if still valid (with 5 minute buffer)
     if (this.accessToken && this.tokenExpiresAt) {
       const now = new Date();
@@ -149,7 +161,8 @@ export class FakturoidClientService {
       }
     }
 
-    const { clientId, clientSecret } = await this.getCredentials();
+    const creds = credentials ?? (await this.getCredentials());
+    const { clientId, clientSecret } = creds;
 
     const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString(
       'base64',
@@ -177,6 +190,7 @@ export class FakturoidClientService {
     } catch (error: unknown) {
       this.accessToken = null;
       this.tokenExpiresAt = null;
+      this.cachedCredentials = null;
 
       if (isHttpError(error)) {
         throw new UnauthorizedException(
@@ -195,15 +209,15 @@ export class FakturoidClientService {
     method: string,
     path: string,
     data?: unknown,
-    isRetry = false,
+    retryCount = 0,
   ): Promise<T> {
-    const token = await this.authenticate();
-    const { userAgentEmail } = await this.getCredentials();
+    const credentials = await this.getCredentials();
+    const token = await this.authenticate(credentials);
 
     const url = `${FAKTUROID_BASE_URL}${path}`;
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
-      'User-Agent': `TogglFakturoidSync (${userAgentEmail})`,
+      'User-Agent': `TogglFakturoidSync (${credentials.userAgentEmail})`,
       'Content-Type': 'application/json',
     };
 
@@ -225,46 +239,60 @@ export class FakturoidClientService {
 
       const status = error.response?.status;
 
-      // 401: clear token and retry once
-      if (status === 401 && !isRetry) {
+      // 401: clear token and retry once (only on first attempt)
+      if (status === 401 && retryCount === 0) {
         this.logger.warn('Fakturoid returned 401, clearing token and retrying');
         this.accessToken = null;
         this.tokenExpiresAt = null;
-        return this.request<T>(method, path, data, true);
+        this.cachedCredentials = null;
+        return this.request<T>(method, path, data, retryCount + 1);
       }
 
       // 403: likely missing User-Agent
       if (status === 403) {
+        this.logger.error(
+          `Fakturoid API 403: ${JSON.stringify(error.response?.data)}`,
+        );
         throw new ForbiddenException(
-          'Fakturoid API returned 403 Forbidden. ' +
-            'Ensure User-Agent header is set correctly. ' +
-            `Response: ${JSON.stringify(error.response?.data)}`,
+          'Fakturoid API returned 403 Forbidden. Check User-Agent and credentials configuration.',
         );
       }
 
       // 422: validation errors
       if (status === 422) {
-        const validationErrors = error.response?.data;
+        this.logger.error(
+          `Fakturoid validation errors: ${JSON.stringify(error.response?.data)}`,
+        );
         throw new BadRequestException(
-          `Fakturoid validation error: ${JSON.stringify(validationErrors)}`,
+          'Fakturoid rejected the invoice payload. Check server logs for validation details.',
         );
       }
 
       // 429: rate limit exceeded
       if (status === 429) {
+        if (retryCount >= MAX_RETRIES) {
+          throw new HttpException(
+            'Fakturoid API rate limit exceeded after maximum retries.',
+            HttpStatus.TOO_MANY_REQUESTS,
+          );
+        }
+
         const retryAfter = error.response?.headers?.['retry-after'];
         const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : 60_000;
 
         this.logger.warn(
-          `Fakturoid rate limit hit (429). Waiting ${waitMs}ms before retry.`,
+          `Fakturoid rate limit hit (429). Waiting ${waitMs}ms before retry (attempt ${retryCount + 1}/${MAX_RETRIES}).`,
         );
 
         await new Promise((resolve) => setTimeout(resolve, waitMs));
-        return this.request<T>(method, path, data, isRetry);
+        return this.request<T>(method, path, data, retryCount + 1);
       }
 
+      this.logger.error(
+        `Fakturoid API error ${String(status)}: ${JSON.stringify(error.response?.data)}`,
+      );
       throw new InternalServerErrorException(
-        `Fakturoid API error: ${String(status ?? 'unknown')} - ${error.message ?? ''}`,
+        'Fakturoid API request failed. Check server logs for details.',
       );
     }
   }
@@ -321,10 +349,11 @@ export class FakturoidClientService {
   }
 
   /**
-   * Clears cached token. Useful for testing or manual token invalidation.
+   * Clears cached token and credentials. Useful for testing or manual token invalidation.
    */
   clearCachedToken(): void {
     this.accessToken = null;
     this.tokenExpiresAt = null;
+    this.cachedCredentials = null;
   }
 }

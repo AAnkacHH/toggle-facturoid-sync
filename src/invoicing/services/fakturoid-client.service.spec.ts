@@ -7,6 +7,8 @@ import { FakturoidClientService } from './fakturoid-client.service';
 import { EncryptionService } from './encryption.service';
 import { ServiceConfig } from '../entities/service-config.entity';
 import {
+  HttpException,
+  HttpStatus,
   InternalServerErrorException,
   ForbiddenException,
   BadRequestException,
@@ -406,19 +408,29 @@ describe('FakturoidClientService', () => {
       expect(mockedAxios.request).toHaveBeenCalledTimes(2);
     });
 
-    it('should throw ForbiddenException on 403 response', async () => {
+    it('should throw ForbiddenException on 403 without leaking response data', async () => {
       mockedAxios.post.mockResolvedValueOnce(mockTokenResponse('test-token'));
 
       mockedAxios.request.mockRejectedValueOnce(
         createAxiosLikeError(403, { error: 'Missing User-Agent' }),
       );
 
-      await expect(service.getInvoice('test-slug', 1)).rejects.toThrow(
-        ForbiddenException,
-      );
+      try {
+        await service.getInvoice('test-slug', 1);
+        fail('Expected ForbiddenException to be thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ForbiddenException);
+        // Verify the error message does not contain the raw response data
+        expect((error as ForbiddenException).message).not.toContain(
+          'Missing User-Agent',
+        );
+        expect((error as ForbiddenException).message).toContain(
+          'Check User-Agent and credentials configuration',
+        );
+      }
     });
 
-    it('should throw BadRequestException on 422 validation error', async () => {
+    it('should throw BadRequestException on 422 without leaking validation details', async () => {
       mockedAxios.post.mockResolvedValueOnce(mockTokenResponse('test-token'));
 
       mockedAxios.request.mockRejectedValueOnce(
@@ -433,6 +445,53 @@ describe('FakturoidClientService', () => {
           lines: [],
         }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw HttpException with 429 status after MAX_RETRIES exceeded', async () => {
+      mockedAxios.post.mockResolvedValue(mockTokenResponse('test-token'));
+
+      // All requests return 429
+      mockedAxios.request.mockRejectedValue(
+        createAxiosLikeError(429, { error: 'rate limited' }, { 'retry-after': '0' }),
+      );
+
+      await expect(service.getInvoice('test-slug', 1)).rejects.toThrow(
+        HttpException,
+      );
+
+      try {
+        await service.getInvoice('test-slug', 1);
+      } catch (error) {
+        expect(error).toBeInstanceOf(HttpException);
+        expect((error as HttpException).getStatus()).toBe(
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+        expect((error as HttpException).message).toContain(
+          'rate limit exceeded after maximum retries',
+        );
+      }
+    }, 30000);
+
+    it('should throw generic InternalServerErrorException without leaking error details', async () => {
+      mockedAxios.post.mockResolvedValueOnce(mockTokenResponse('test-token'));
+
+      mockedAxios.request.mockRejectedValueOnce(
+        createAxiosLikeError(500, { internal: 'secret-db-error' }),
+      );
+
+      await expect(service.getInvoice('test-slug', 1)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+
+      // Re-setup for second assertion
+      mockedAxios.post.mockResolvedValueOnce(mockTokenResponse('test-token'));
+      mockedAxios.request.mockRejectedValueOnce(
+        createAxiosLikeError(500, { internal: 'secret-db-error' }),
+      );
+
+      await expect(service.getInvoice('test-slug', 1)).rejects.toThrow(
+        'Fakturoid API request failed. Check server logs for details.',
+      );
     });
 
     it('should throw when credentials are missing from DB', async () => {
@@ -478,6 +537,55 @@ describe('FakturoidClientService', () => {
       const token = await service.authenticate();
       expect(token).toBe('second-token');
       expect(mockedAxios.post).toHaveBeenCalledTimes(2);
+    });
+
+    it('should also clear cached credentials, forcing a new DB query', async () => {
+      mockedAxios.post.mockResolvedValueOnce(mockTokenResponse('first-token'));
+
+      // First authenticate triggers getCredentials() -> DB query
+      await service.authenticate();
+      expect(repoMock.find).toHaveBeenCalledTimes(1);
+
+      // Second authenticate uses cached credentials (no new DB query)
+      service.clearCachedToken();
+      mockedAxios.post.mockResolvedValueOnce(mockTokenResponse('second-token'));
+
+      // clearCachedToken clears credentials too, so authenticate will query DB again
+      await service.authenticate();
+      expect(repoMock.find).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('credential caching', () => {
+    it('should cache credentials and not query DB on subsequent calls', async () => {
+      mockedAxios.post.mockResolvedValueOnce(mockTokenResponse('test-token'));
+      mockedAxios.request.mockResolvedValueOnce({
+        data: { id: 1, number: '2026-0001', total: '100', status: 'open', subject_id: 1, html_url: '' },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: { headers: {} },
+      });
+
+      await service.getInvoice('test-slug', 1);
+
+      // request() calls getCredentials() which hits DB once (then caches)
+      // authenticate() also receives credentials from request(), no extra DB call
+      expect(repoMock.find).toHaveBeenCalledTimes(1);
+
+      // Second request should use cached credentials
+      mockedAxios.request.mockResolvedValueOnce({
+        data: { id: 2, number: '2026-0002', total: '200', status: 'open', subject_id: 2, html_url: '' },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: { headers: {} },
+      });
+
+      await service.getInvoice('test-slug', 2);
+
+      // Still only 1 DB call total thanks to caching
+      expect(repoMock.find).toHaveBeenCalledTimes(1);
     });
   });
 });

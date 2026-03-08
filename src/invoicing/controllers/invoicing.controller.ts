@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -13,14 +14,20 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere } from 'typeorm';
 import { InvoicingService } from '../services/invoicing.service';
+import { TogglClientService } from '../services/toggl-client.service';
+import { FakturoidClientService } from '../services/fakturoid-client.service';
 import { TimeReport } from '../entities/time-report.entity';
 import { InvoiceLog, InvoiceStatus } from '../entities/invoice-log.entity';
 import { GenerateInvoicesDto } from '../dto/generate-invoices.dto';
+import { TogglClient, TogglProject } from '../dto/toggl-summary.dto';
+import { FakturoidSubject } from '../dto/fakturoid-invoice.dto';
 
 @Controller('api/invoicing')
 export class InvoicingController {
   constructor(
     private readonly invoicingService: InvoicingService,
+    private readonly togglClient: TogglClientService,
+    private readonly fakturoidClient: FakturoidClientService,
     @InjectRepository(TimeReport)
     private readonly timeReportRepo: Repository<TimeReport>,
     @InjectRepository(InvoiceLog)
@@ -39,6 +46,28 @@ export class InvoicingController {
     @Param('month', ParseIntPipe) month: number,
   ) {
     return this.invoicingService.getMonthPreview(year, month);
+  }
+
+  @Post('reports/fetch')
+  @HttpCode(HttpStatus.OK)
+  fetchReports(@Body() dto: GenerateInvoicesDto): Promise<TimeReport[]> {
+    return this.invoicingService.fetchAndSaveTimeReports(dto.year, dto.month);
+  }
+
+  @Get('toggl/clients')
+  getTogglClients(): Promise<TogglClient[]> {
+    return this.togglClient.getClients();
+  }
+
+  @Get('toggl/projects')
+  getTogglProjects(): Promise<TogglProject[]> {
+    return this.togglClient.getProjects();
+  }
+
+  @Get('fakturoid/subjects')
+  async getFakturoidSubjects(): Promise<FakturoidSubject[]> {
+    const slug = await this.invoicingService.getFakturoidSlug();
+    return this.fakturoidClient.getSubjects(slug);
   }
 
   @Get('time-reports')
@@ -78,7 +107,15 @@ export class InvoicingController {
       where.periodMonth = parseInt(month, 10);
     }
     if (status) {
-      where.status = status as InvoiceStatus;
+      if (
+        Object.values(InvoiceStatus).includes(status as InvoiceStatus)
+      ) {
+        where.status = status as InvoiceStatus;
+      } else {
+        throw new BadRequestException(
+          `Invalid status. Must be one of: ${Object.values(InvoiceStatus).join(', ')}`,
+        );
+      }
     }
     if (clientMappingId) {
       where.clientMappingId = clientMappingId;

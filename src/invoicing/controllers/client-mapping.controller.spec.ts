@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { ClientMappingController } from './client-mapping.controller';
+import { ClientMappingService } from '../services/client-mapping.service';
 import { ClientMapping } from '../entities/client-mapping.entity';
 
 function createMapping(overrides: Partial<ClientMapping> = {}): ClientMapping {
@@ -26,23 +25,23 @@ function createMapping(overrides: Partial<ClientMapping> = {}): ClientMapping {
 
 describe('ClientMappingController', () => {
   let controller: ClientMappingController;
-  let repo: jest.Mocked<Repository<ClientMapping>>;
+  let service: jest.Mocked<ClientMappingService>;
 
   beforeEach(async () => {
-    repo = {
-      find: jest.fn(),
-      findOne: jest.fn(),
+    service = {
       create: jest.fn(),
-      save: jest.fn(),
+      findAll: jest.fn(),
+      findOne: jest.fn(),
+      update: jest.fn(),
       remove: jest.fn(),
-    } as unknown as jest.Mocked<Repository<ClientMapping>>;
+    } as unknown as jest.Mocked<ClientMappingService>;
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ClientMappingController],
       providers: [
         {
-          provide: getRepositoryToken(ClientMapping),
-          useValue: repo,
+          provide: ClientMappingService,
+          useValue: service,
         },
       ],
     }).compile();
@@ -57,9 +56,7 @@ describe('ClientMappingController', () => {
   describe('create', () => {
     it('should create a client mapping', async () => {
       const mapping = createMapping();
-      repo.findOne.mockResolvedValue(null); // no duplicate
-      repo.create.mockReturnValue(mapping);
-      repo.save.mockResolvedValue(mapping);
+      service.create.mockResolvedValue(mapping);
 
       const result = await controller.create({
         name: 'Acme Corp',
@@ -70,12 +67,15 @@ describe('ClientMappingController', () => {
       });
 
       expect(result).toEqual(mapping);
-      expect(repo.create).toHaveBeenCalled();
-      expect(repo.save).toHaveBeenCalled();
+      expect(service.create).toHaveBeenCalled();
     });
 
     it('should throw ConflictException for duplicate togglClientId', async () => {
-      repo.findOne.mockResolvedValue(createMapping()); // duplicate found
+      service.create.mockRejectedValue(
+        new ConflictException(
+          'ClientMapping with togglClientId=100 already exists',
+        ),
+      );
 
       await expect(
         controller.create({
@@ -92,51 +92,50 @@ describe('ClientMappingController', () => {
   describe('findAll', () => {
     it('should return all mappings', async () => {
       const mappings = [createMapping()];
-      repo.find.mockResolvedValue(mappings);
+      service.findAll.mockResolvedValue(mappings);
 
       const result = await controller.findAll();
 
       expect(result).toHaveLength(1);
-      expect(repo.find).toHaveBeenCalled();
+      expect(service.findAll).toHaveBeenCalledWith(undefined);
     });
 
     it('should filter by active=true', async () => {
       const activeMappings = [createMapping({ isActive: true })];
-      repo.find.mockResolvedValue(activeMappings);
+      service.findAll.mockResolvedValue(activeMappings);
 
       const result = await controller.findAll('true');
 
       expect(result).toHaveLength(1);
-      expect(repo.find).toHaveBeenCalledWith({
-        where: { isActive: true },
-      });
+      expect(service.findAll).toHaveBeenCalledWith('true');
     });
 
     it('should filter by active=false', async () => {
       const inactiveMappings = [createMapping({ isActive: false })];
-      repo.find.mockResolvedValue(inactiveMappings);
+      service.findAll.mockResolvedValue(inactiveMappings);
 
       const result = await controller.findAll('false');
 
       expect(result).toHaveLength(1);
-      expect(repo.find).toHaveBeenCalledWith({
-        where: { isActive: false },
-      });
+      expect(service.findAll).toHaveBeenCalledWith('false');
     });
   });
 
   describe('findOne', () => {
     it('should return a single mapping', async () => {
       const mapping = createMapping();
-      repo.findOne.mockResolvedValue(mapping);
+      service.findOne.mockResolvedValue(mapping);
 
       const result = await controller.findOne('map-uuid-1');
 
       expect(result).toEqual(mapping);
+      expect(service.findOne).toHaveBeenCalledWith('map-uuid-1');
     });
 
     it('should throw NotFoundException for missing ID', async () => {
-      repo.findOne.mockResolvedValue(null);
+      service.findOne.mockRejectedValue(
+        new NotFoundException('ClientMapping with id="nonexistent" not found'),
+      );
 
       await expect(controller.findOne('nonexistent')).rejects.toThrow(
         NotFoundException,
@@ -146,20 +145,23 @@ describe('ClientMappingController', () => {
 
   describe('update', () => {
     it('should update a mapping', async () => {
-      const mapping = createMapping();
       const updatedMapping = createMapping({ name: 'Updated Corp' });
-      repo.findOne.mockResolvedValue(mapping);
-      repo.save.mockResolvedValue(updatedMapping);
+      service.update.mockResolvedValue(updatedMapping);
 
       const result = await controller.update('map-uuid-1', {
         name: 'Updated Corp',
       });
 
       expect(result.name).toBe('Updated Corp');
+      expect(service.update).toHaveBeenCalledWith('map-uuid-1', {
+        name: 'Updated Corp',
+      });
     });
 
     it('should throw NotFoundException for missing ID', async () => {
-      repo.findOne.mockResolvedValue(null);
+      service.update.mockRejectedValue(
+        new NotFoundException('ClientMapping with id="nonexistent" not found'),
+      );
 
       await expect(
         controller.update('nonexistent', { name: 'Updated' }),
@@ -167,17 +169,11 @@ describe('ClientMappingController', () => {
     });
 
     it('should throw ConflictException when updating to duplicate togglClientId', async () => {
-      const mapping = createMapping();
-      const duplicate = createMapping({
-        id: 'map-uuid-2',
-        togglClientId: '200',
-      });
-
-      // First call: find the mapping to update
-      // Second call: check for duplicate togglClientId
-      repo.findOne
-        .mockResolvedValueOnce(mapping)
-        .mockResolvedValueOnce(duplicate);
+      service.update.mockRejectedValue(
+        new ConflictException(
+          'ClientMapping with togglClientId=200 already exists',
+        ),
+      );
 
       await expect(
         controller.update('map-uuid-1', { togglClientId: 200 }),
@@ -187,17 +183,17 @@ describe('ClientMappingController', () => {
 
   describe('remove', () => {
     it('should remove a mapping', async () => {
-      const mapping = createMapping();
-      repo.findOne.mockResolvedValue(mapping);
-      repo.remove.mockResolvedValue(mapping);
+      service.remove.mockResolvedValue(undefined);
 
       await controller.remove('map-uuid-1');
 
-      expect(repo.remove).toHaveBeenCalledWith(mapping);
+      expect(service.remove).toHaveBeenCalledWith('map-uuid-1');
     });
 
     it('should throw NotFoundException for missing ID', async () => {
-      repo.findOne.mockResolvedValue(null);
+      service.remove.mockRejectedValue(
+        new NotFoundException('ClientMapping with id="nonexistent" not found'),
+      );
 
       await expect(controller.remove('nonexistent')).rejects.toThrow(
         NotFoundException,

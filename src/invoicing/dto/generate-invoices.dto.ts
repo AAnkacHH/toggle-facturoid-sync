@@ -4,10 +4,10 @@ export class GenerateInvoicesDto {
   @IsNumber()
   @Min(2020)
   @Max(2100)
-  year: number;
+  year!: number;
 
   @IsNumber()
   @Min(1)
   @Max(12)
-  month: number;
+  month!: number;
 }

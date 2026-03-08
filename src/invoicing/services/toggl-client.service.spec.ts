@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/unbound-method */
-import { HttpException, HttpStatus } from '@nestjs/common';
+import {
+  BadGatewayException,
+  HttpException,
+  HttpStatus,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -9,21 +14,23 @@ import { EncryptionService } from './encryption.service';
 import { TogglClientService } from './toggl-client.service';
 import { TogglSummaryResponse } from '../dto/toggl-summary.dto';
 
-// Partial mock: only mock `post`, keep `isAxiosError` and other exports real
+// Partial mock: only mock `request`, keep `isAxiosError` and other exports real
 jest.mock('axios', () => {
   const actual = jest.requireActual('axios');
   return {
     ...actual,
     default: {
       ...actual.default,
-      post: jest.fn(),
+      request: jest.fn(),
       isAxiosError: actual.default.isAxiosError,
     },
     __esModule: true,
   };
 });
 
-const mockedPost = axios.post as jest.MockedFunction<typeof axios.post>;
+const mockedRequest = axios.request as jest.MockedFunction<
+  typeof axios.request
+>;
 
 const FAKE_API_TOKEN = 'test-toggl-api-token-12345';
 const FAKE_WORKSPACE_ID = '1234567';
@@ -128,8 +135,8 @@ describe('TogglClientService', () => {
     repoMock.find.mockResolvedValue(createServiceConfigs() as ServiceConfig[]);
     encryptionMock.decrypt.mockReturnValue(FAKE_API_TOKEN);
 
-    // Reset axios post mock
-    mockedPost.mockReset();
+    // Reset axios request mock
+    mockedRequest.mockReset();
 
     // Spy on setTimeout / sleep to make tests fast
     jest.spyOn(globalThis, 'setTimeout').mockImplementation(((
@@ -144,8 +151,10 @@ describe('TogglClientService', () => {
     jest.restoreAllMocks();
   });
 
+  // --- getMonthSummary tests ---
+
   it('should return correctly parsed data with hours calculated from seconds', async () => {
-    mockedPost.mockResolvedValueOnce({
+    mockedRequest.mockResolvedValueOnce({
       data: createTogglResponse(),
     });
 
@@ -173,7 +182,7 @@ describe('TogglClientService', () => {
   });
 
   it('should filter out groups with null client IDs', async () => {
-    mockedPost.mockResolvedValueOnce({
+    mockedRequest.mockResolvedValueOnce({
       data: createTogglResponse(),
     });
 
@@ -185,14 +194,14 @@ describe('TogglClientService', () => {
     expect(result.map((r) => r.clientId)).toEqual([100, 200]);
   });
 
-  it('should throw 401 on Toggl API authentication error', async () => {
-    mockedPost.mockRejectedValueOnce(createAxiosError(401));
+  it('should throw UnauthorizedException on Toggl API authentication error', async () => {
+    mockedRequest.mockRejectedValueOnce(createAxiosError(401));
 
     try {
       await service.getMonthSummary(2026, 2);
-      fail('Expected HttpException to be thrown');
+      fail('Expected UnauthorizedException to be thrown');
     } catch (error) {
-      expect(error).toBeInstanceOf(HttpException);
+      expect(error).toBeInstanceOf(UnauthorizedException);
       expect((error as HttpException).getStatus()).toBe(
         HttpStatus.UNAUTHORIZED,
       );
@@ -203,18 +212,18 @@ describe('TogglClientService', () => {
   });
 
   it('should retry on 429 rate limit and succeed on subsequent attempt', async () => {
-    mockedPost
+    mockedRequest
       .mockRejectedValueOnce(createAxiosError(429))
       .mockResolvedValueOnce({ data: createTogglResponse() });
 
     const result = await service.getMonthSummary(2026, 2);
 
-    expect(mockedPost).toHaveBeenCalledTimes(2);
+    expect(mockedRequest).toHaveBeenCalledTimes(2);
     expect(result).toHaveLength(2);
   });
 
   it('should throw after exceeding maximum retries on 429', async () => {
-    mockedPost
+    mockedRequest
       .mockRejectedValueOnce(createAxiosError(429))
       .mockRejectedValueOnce(createAxiosError(429))
       .mockRejectedValueOnce(createAxiosError(429))
@@ -232,13 +241,13 @@ describe('TogglClientService', () => {
   });
 
   it('should use Retry-After header when present on 429 response', async () => {
-    mockedPost
+    mockedRequest
       .mockRejectedValueOnce(createAxiosError(429, { 'retry-after': '5' }))
       .mockResolvedValueOnce({ data: createTogglResponse() });
 
     const result = await service.getMonthSummary(2026, 2);
 
-    expect(mockedPost).toHaveBeenCalledTimes(2);
+    expect(mockedRequest).toHaveBeenCalledTimes(2);
     expect(result).toHaveLength(2);
   });
 
@@ -247,9 +256,9 @@ describe('TogglClientService', () => {
 
     try {
       await service.getMonthSummary(2026, 2);
-      fail('Expected HttpException to be thrown');
+      fail('Expected UnauthorizedException to be thrown');
     } catch (error) {
-      expect(error).toBeInstanceOf(HttpException);
+      expect(error).toBeInstanceOf(UnauthorizedException);
       expect((error as HttpException).getStatus()).toBe(
         HttpStatus.UNAUTHORIZED,
       );
@@ -260,98 +269,101 @@ describe('TogglClientService', () => {
   });
 
   it('should calculate correct date range for February 2026', async () => {
-    mockedPost.mockResolvedValueOnce({
+    mockedRequest.mockResolvedValueOnce({
       data: { groups: [] },
     });
 
     await service.getMonthSummary(2026, 2);
 
-    expect(mockedPost).toHaveBeenCalledTimes(1);
-    const callArgs = mockedPost.mock.calls[0];
-    const requestBody = callArgs[1] as Record<string, unknown>;
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+    const callArgs = mockedRequest.mock.calls[0];
+    const requestConfig = callArgs[0] as Record<string, unknown>;
+    const requestBody = requestConfig.data as Record<string, unknown>;
 
     expect(requestBody.start_date).toBe('2026-02-01');
     expect(requestBody.end_date).toBe('2026-02-28');
   });
 
   it('should calculate correct date range for a 31-day month', async () => {
-    mockedPost.mockResolvedValueOnce({
+    mockedRequest.mockResolvedValueOnce({
       data: { groups: [] },
     });
 
     await service.getMonthSummary(2026, 1);
 
-    const callArgs = mockedPost.mock.calls[0];
-    const requestBody = callArgs[1] as Record<string, unknown>;
+    const callArgs = mockedRequest.mock.calls[0];
+    const requestConfig = callArgs[0] as Record<string, unknown>;
+    const requestBody = requestConfig.data as Record<string, unknown>;
 
     expect(requestBody.start_date).toBe('2026-01-01');
     expect(requestBody.end_date).toBe('2026-01-31');
   });
 
   it('should calculate correct date range for leap year February', async () => {
-    mockedPost.mockResolvedValueOnce({
+    mockedRequest.mockResolvedValueOnce({
       data: { groups: [] },
     });
 
     await service.getMonthSummary(2024, 2);
 
-    const callArgs = mockedPost.mock.calls[0];
-    const requestBody = callArgs[1] as Record<string, unknown>;
+    const callArgs = mockedRequest.mock.calls[0];
+    const requestConfig = callArgs[0] as Record<string, unknown>;
+    const requestBody = requestConfig.data as Record<string, unknown>;
 
     expect(requestBody.start_date).toBe('2024-02-01');
     expect(requestBody.end_date).toBe('2024-02-29');
   });
 
   it('should construct correct Basic Auth header', async () => {
-    mockedPost.mockResolvedValueOnce({
+    mockedRequest.mockResolvedValueOnce({
       data: { groups: [] },
     });
 
     await service.getMonthSummary(2026, 2);
 
-    const callArgs = mockedPost.mock.calls[0];
-    const requestHeaders = callArgs[2] as { headers: Record<string, string> };
+    const callArgs = mockedRequest.mock.calls[0];
+    const requestConfig = callArgs[0] as Record<string, unknown>;
+    const requestHeaders = requestConfig.headers as Record<string, string>;
 
     const expectedAuth = `Basic ${Buffer.from(`${FAKE_API_TOKEN}:api_token`).toString('base64')}`;
-    expect(requestHeaders.headers.Authorization).toBe(expectedAuth);
-    expect(requestHeaders.headers['User-Agent']).toBe(
-      'toggl-facturoid-sync/1.0',
-    );
+    expect(requestHeaders.Authorization).toBe(expectedAuth);
+    expect(requestHeaders['User-Agent']).toBe('toggl-facturoid-sync/1.0');
   });
 
   it('should send correct request body with grouping parameters', async () => {
-    mockedPost.mockResolvedValueOnce({
+    mockedRequest.mockResolvedValueOnce({
       data: { groups: [] },
     });
 
     await service.getMonthSummary(2026, 3);
 
-    const callArgs = mockedPost.mock.calls[0];
-    const url = callArgs[0];
-    const requestBody = callArgs[1] as Record<string, unknown>;
+    const callArgs = mockedRequest.mock.calls[0];
+    const requestConfig = callArgs[0] as Record<string, unknown>;
 
-    expect(url).toBe(
+    expect(requestConfig.url).toBe(
       `https://api.track.toggl.com/reports/api/v3/workspace/${FAKE_WORKSPACE_ID}/summary/time_entries`,
     );
+    expect(requestConfig.method).toBe('POST');
+    const requestBody = requestConfig.data as Record<string, unknown>;
     expect(requestBody.grouping).toBe('clients');
     expect(requestBody.sub_grouping).toBe('projects');
     expect(requestBody.include_time_entry_ids).toBe(false);
   });
 
-  it('should throw on 5xx server errors', async () => {
-    mockedPost.mockRejectedValueOnce(createAxiosError(503));
+  it('should throw BadGatewayException on 5xx server errors', async () => {
+    mockedRequest.mockRejectedValueOnce(createAxiosError(503));
 
     try {
       await service.getMonthSummary(2026, 2);
-      fail('Expected HttpException to be thrown');
+      fail('Expected BadGatewayException to be thrown');
     } catch (error) {
-      expect(error).toBeInstanceOf(HttpException);
+      expect(error).toBeInstanceOf(BadGatewayException);
       expect((error as HttpException).getStatus()).toBe(HttpStatus.BAD_GATEWAY);
     }
   });
 
   it('should decrypt api_token using EncryptionService', async () => {
-    mockedPost.mockResolvedValueOnce({
+    mockedRequest.mockResolvedValueOnce({
       data: { groups: [] },
     });
 
@@ -390,9 +402,9 @@ describe('TogglClientService', () => {
 
     try {
       await service.getMonthSummary(2026, 2);
-      fail('Expected HttpException to be thrown');
+      fail('Expected UnauthorizedException to be thrown');
     } catch (error) {
-      expect(error).toBeInstanceOf(HttpException);
+      expect(error).toBeInstanceOf(UnauthorizedException);
       expect((error as HttpException).getStatus()).toBe(
         HttpStatus.UNAUTHORIZED,
       );
@@ -400,5 +412,127 @@ describe('TogglClientService', () => {
         'not properly encrypted',
       );
     }
+  });
+
+  // --- getClients tests ---
+
+  describe('getClients', () => {
+    it('should fetch clients from the Toggl API v9 endpoint', async () => {
+      const fakeClients = [
+        { id: 1, name: 'Client A', wid: 1234567, archived: false },
+        { id: 2, name: 'Client B', wid: 1234567, archived: true },
+      ];
+
+      mockedRequest.mockResolvedValueOnce({ data: fakeClients });
+
+      const result = await service.getClients();
+
+      expect(mockedRequest).toHaveBeenCalledTimes(1);
+      const requestConfig = mockedRequest.mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(requestConfig.method).toBe('GET');
+      expect(requestConfig.url).toBe(
+        `https://api.track.toggl.com/api/v9/workspaces/${FAKE_WORKSPACE_ID}/clients`,
+      );
+      expect(result).toEqual(fakeClients);
+    });
+
+    it('should use provided workspaceId instead of config', async () => {
+      const customWorkspaceId = '9999999';
+      mockedRequest.mockResolvedValueOnce({ data: [] });
+
+      await service.getClients(customWorkspaceId);
+
+      const requestConfig = mockedRequest.mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(requestConfig.url).toBe(
+        `https://api.track.toggl.com/api/v9/workspaces/${customWorkspaceId}/clients`,
+      );
+    });
+
+    it('should throw UnauthorizedException on 401', async () => {
+      mockedRequest.mockRejectedValueOnce(createAxiosError(401));
+
+      await expect(service.getClients()).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+  });
+
+  // --- getProjects tests ---
+
+  describe('getProjects', () => {
+    it('should fetch projects from the Toggl API v9 endpoint', async () => {
+      const fakeProjects = [
+        {
+          id: 101,
+          name: 'Project X',
+          wid: 1234567,
+          cid: 1,
+          client_id: 1,
+          active: true,
+          color: '#ff0000',
+        },
+        {
+          id: 102,
+          name: 'Project Y',
+          wid: 1234567,
+          cid: null,
+          client_id: null,
+          active: false,
+          color: '#00ff00',
+        },
+      ];
+
+      mockedRequest.mockResolvedValueOnce({ data: fakeProjects });
+
+      const result = await service.getProjects();
+
+      expect(mockedRequest).toHaveBeenCalledTimes(1);
+      const requestConfig = mockedRequest.mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(requestConfig.method).toBe('GET');
+      expect(requestConfig.url).toBe(
+        `https://api.track.toggl.com/api/v9/workspaces/${FAKE_WORKSPACE_ID}/projects`,
+      );
+      expect(result).toEqual(fakeProjects);
+    });
+
+    it('should use provided workspaceId instead of config', async () => {
+      const customWorkspaceId = '8888888';
+      mockedRequest.mockResolvedValueOnce({ data: [] });
+
+      await service.getProjects(customWorkspaceId);
+
+      const requestConfig = mockedRequest.mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(requestConfig.url).toBe(
+        `https://api.track.toggl.com/api/v9/workspaces/${customWorkspaceId}/projects`,
+      );
+    });
+
+    it('should throw UnauthorizedException on 401', async () => {
+      mockedRequest.mockRejectedValueOnce(createAxiosError(401));
+
+      await expect(service.getProjects()).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('should throw BadGatewayException on 5xx', async () => {
+      mockedRequest.mockRejectedValueOnce(createAxiosError(500));
+
+      await expect(service.getProjects()).rejects.toThrow(
+        BadGatewayException,
+      );
+    });
   });
 });

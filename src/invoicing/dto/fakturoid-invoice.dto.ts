@@ -8,6 +8,7 @@ export interface FakturoidInvoiceLine {
   quantity: number; // hours
   unit_name: string; // 'hod' (Czech for hours)
   unit_price: number; // hourly rate
+  vat_rate?: number; // VAT rate percentage, e.g. 21
 }
 
 export interface FakturoidInvoicePayload {
@@ -15,6 +16,11 @@ export interface FakturoidInvoicePayload {
   payment_method: string; // 'bank'
   currency: string; // 'CZK'
   lines: FakturoidInvoiceLine[];
+  // Optional fields per Fakturoid API v3
+  issued_on?: string; // ISO date string, e.g. '2026-03-01'
+  taxable_fulfillment_due?: string; // ISO date string
+  due?: number; // payment due days
+  note?: string; // invoice note
 }
 
 export interface FakturoidInvoiceResponse {
@@ -30,6 +36,10 @@ export interface FakturoidSubject {
   id: number;
   name: string;
   email: string | null;
+  street: string | null;
+  city: string | null;
+  country: string | null;
+  registration_no: string | null; // ICO
 }
 
 export interface FakturoidTokenResponse {

@@ -617,6 +617,8 @@ describe('InvoicingService', () => {
       expect(client.totalHours).toBe(3.5);
       expect(client.totalAmount).toBe(5250);
       expect(client.hasExistingInvoice).toBe(false);
+
+      expect(preview.grandTotal).toEqual({ hours: 3.5, amount: 5250 });
     });
 
     it('should flag clients that already have an existing invoice', async () => {
@@ -644,6 +646,7 @@ describe('InvoicingService', () => {
       expect(preview.year).toBe(2026);
       expect(preview.month).toBe(2);
       expect(preview.clients).toHaveLength(0);
+      expect(preview.grandTotal).toEqual({ hours: 0, amount: 0 });
     });
   });
 });

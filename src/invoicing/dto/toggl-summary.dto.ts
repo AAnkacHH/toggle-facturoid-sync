@@ -22,14 +22,33 @@ export interface TogglSummaryResponse {
  * Processed DTOs — internal application shape
  */
 
-export class TogglProjectSummary {
+export interface TogglProjectSummary {
   projectId: number;
   projectName: string;
   totalSeconds: number;
   totalHours: number;
 }
 
-export class TogglMonthSummary {
+export interface TogglMonthSummary {
   clientId: number;
   projects: TogglProjectSummary[];
+}
+
+/** Toggl API v9 — GET /workspaces/{id}/clients */
+export interface TogglClient {
+  id: number;
+  name: string;
+  wid: number;
+  archived: boolean;
+}
+
+/** Toggl API v9 — GET /workspaces/{id}/projects */
+export interface TogglProject {
+  id: number;
+  name: string;
+  wid: number;
+  cid: number | null;
+  client_id: number | null;
+  active: boolean;
+  color: string;
 }

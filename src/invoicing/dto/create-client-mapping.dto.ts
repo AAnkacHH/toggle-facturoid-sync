@@ -10,23 +10,23 @@ import {
 export class CreateClientMappingDto {
   @IsString()
   @Length(1, 255)
-  name: string;
+  name!: string;
 
   @IsNumber()
   @IsPositive()
-  togglClientId: number;
+  togglClientId!: number;
 
   @IsNumber()
   @IsPositive()
-  togglWorkspaceId: number;
+  togglWorkspaceId!: number;
 
   @IsNumber()
   @IsPositive()
-  fakturoidSubjectId: number;
+  fakturoidSubjectId!: number;
 
   @IsNumber()
   @IsPositive()
-  hourlyRate: number;
+  hourlyRate!: number;
 
   @IsOptional()
   @IsString()

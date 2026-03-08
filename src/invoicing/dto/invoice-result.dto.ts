@@ -26,4 +26,8 @@ export interface MonthPreview {
   year: number;
   month: number;
   clients: ClientPreview[];
+  grandTotal: {
+    hours: number;
+    amount: number;
+  };
 }

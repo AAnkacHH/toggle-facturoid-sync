@@ -3,15 +3,15 @@ import { IsBoolean, IsString, Length } from 'class-validator';
 export class CreateServiceConfigDto {
   @IsString()
   @Length(1, 100)
-  serviceName: string;
+  serviceName!: string;
 
   @IsString()
   @Length(1, 100)
-  configKey: string;
+  configKey!: string;
 
   @IsString()
-  value: string;
+  value!: string;
 
   @IsBoolean()
-  isSecret: boolean;
+  isSecret!: boolean;
 }

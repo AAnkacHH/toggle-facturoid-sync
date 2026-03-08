@@ -11,32 +11,32 @@ import {
 @Unique(['serviceName', 'configKey'])
 export class ServiceConfig {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'varchar', length: 100, nullable: false })
-  serviceName: string;
+  serviceName!: string;
 
   @Column({ type: 'varchar', length: 100, nullable: false })
-  configKey: string;
+  configKey!: string;
 
   @Column({ type: 'bytea', nullable: true })
-  encryptedValue: Buffer | null;
+  encryptedValue!: Buffer | null;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
-  plainValue: string | null;
+  plainValue!: string | null;
 
   @Column({ type: 'boolean', default: false })
-  isSecret: boolean;
+  isSecret!: boolean;
 
   @Column({ type: 'bytea', nullable: true })
-  iv: Buffer | null;
+  iv!: Buffer | null;
 
   @Column({ type: 'bytea', nullable: true })
-  authTag: Buffer | null;
+  authTag!: Buffer | null;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

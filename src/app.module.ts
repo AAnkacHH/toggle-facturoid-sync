@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { databaseConfig } from './config/database.config';
+import { AuthModule } from './auth/auth.module';
 import { InvoicingModule } from './invoicing/invoicing.module';
 
 @Module({
@@ -12,6 +13,7 @@ import { InvoicingModule } from './invoicing/invoicing.module';
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync(databaseConfig),
     ScheduleModule.forRoot(),
+    AuthModule,
     InvoicingModule,
   ],
   controllers: [AppController],

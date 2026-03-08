@@ -12,38 +12,38 @@ import { InvoiceLog } from './invoice-log.entity';
 @Entity('client_mapping')
 export class ClientMapping {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'varchar', length: 255, nullable: false })
-  name: string;
+  name!: string;
 
   @Column({ type: 'bigint', unique: true, nullable: false })
-  togglClientId: string;
+  togglClientId!: string;
 
   @Column({ type: 'bigint', nullable: false })
-  togglWorkspaceId: string;
+  togglWorkspaceId!: string;
 
   @Column({ type: 'bigint', nullable: false })
-  fakturoidSubjectId: string;
+  fakturoidSubjectId!: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: false })
-  hourlyRate: string;
+  hourlyRate!: string;
 
   @Column({ type: 'varchar', length: 3, nullable: false, default: 'CZK' })
-  currency: string;
+  currency!: string;
 
   @Column({ type: 'boolean', default: true })
-  isActive: boolean;
+  isActive!: boolean;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @OneToMany(() => TimeReport, (timeReport) => timeReport.clientMapping)
-  timeReports: TimeReport[];
+  timeReports!: TimeReport[];
 
   @OneToMany(() => InvoiceLog, (invoiceLog) => invoiceLog.clientMapping)
-  invoiceLogs: InvoiceLog[];
+  invoiceLogs!: InvoiceLog[];
 }

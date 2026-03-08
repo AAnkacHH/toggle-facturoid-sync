@@ -1,16 +1,26 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import {
+  BadGatewayException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import axios from 'axios';
 import { ServiceConfig } from '../entities/service-config.entity';
 import { EncryptionService } from './encryption.service';
 import {
+  TogglClient,
   TogglMonthSummary,
+  TogglProject,
   TogglProjectSummary,
   TogglSummaryResponse,
 } from '../dto/toggl-summary.dto';
 
 const BASE_URL = 'https://api.track.toggl.com/reports/api/v3';
+const TOGGL_API_BASE_URL = 'https://api.track.toggl.com/api/v9';
 const USER_AGENT = 'toggl-facturoid-sync/1.0';
 const MAX_RETRIES = 3;
 
@@ -44,9 +54,8 @@ export class TogglClientService {
     );
 
     if (!apiTokenConfig || !workspaceIdConfig) {
-      throw new HttpException(
+      throw new UnauthorizedException(
         'Toggl credentials not found in service_config. Please configure api_token and workspace_id for the toggl service.',
-        HttpStatus.UNAUTHORIZED,
       );
     }
 
@@ -55,9 +64,8 @@ export class TogglClientService {
       !apiTokenConfig.iv ||
       !apiTokenConfig.authTag
     ) {
-      throw new HttpException(
+      throw new UnauthorizedException(
         'Toggl api_token is not properly encrypted in service_config.',
-        HttpStatus.UNAUTHORIZED,
       );
     }
 
@@ -70,9 +78,8 @@ export class TogglClientService {
     const workspaceId = workspaceIdConfig.plainValue;
 
     if (!workspaceId) {
-      throw new HttpException(
+      throw new UnauthorizedException(
         'Toggl workspace_id is missing a plainValue in service_config.',
-        HttpStatus.UNAUTHORIZED,
       );
     }
 
@@ -119,34 +126,79 @@ export class TogglClientService {
     };
 
     const response = await this.requestWithRetry<TogglSummaryResponse>(
+      'POST',
       url,
-      body,
       headers,
+      body,
     );
 
     return this.parseResponse(response);
   }
 
   /**
-   * Executes a POST request with exponential backoff retry on 429 responses.
+   * Fetches all clients from the Toggl workspace.
+   * Uses the Toggl API v9 regular endpoint (not Reports API).
+   */
+  async getClients(workspaceId?: string): Promise<TogglClient[]> {
+    const { apiToken, workspaceId: configWorkspaceId } =
+      await this.getCredentials();
+    const wsId = workspaceId ?? configWorkspaceId;
+
+    const url = `${TOGGL_API_BASE_URL}/workspaces/${wsId}/clients`;
+    const headers = {
+      Authorization: this.buildAuthHeader(apiToken),
+      'Content-Type': 'application/json',
+      'User-Agent': USER_AGENT,
+    };
+
+    return this.requestWithRetry<TogglClient[]>('GET', url, headers);
+  }
+
+  /**
+   * Fetches all projects from the Toggl workspace.
+   * Uses the Toggl API v9 regular endpoint (not Reports API).
+   */
+  async getProjects(workspaceId?: string): Promise<TogglProject[]> {
+    const { apiToken, workspaceId: configWorkspaceId } =
+      await this.getCredentials();
+    const wsId = workspaceId ?? configWorkspaceId;
+
+    const url = `${TOGGL_API_BASE_URL}/workspaces/${wsId}/projects`;
+    const headers = {
+      Authorization: this.buildAuthHeader(apiToken),
+      'Content-Type': 'application/json',
+      'User-Agent': USER_AGENT,
+    };
+
+    return this.requestWithRetry<TogglProject[]>('GET', url, headers);
+  }
+
+  /**
+   * Executes an HTTP request with exponential backoff retry on 429 responses.
+   * Supports both GET and POST methods.
    */
   private async requestWithRetry<T>(
+    method: 'GET' | 'POST',
     url: string,
-    body: Record<string, unknown>,
     headers: Record<string, string>,
+    body?: Record<string, unknown>,
   ): Promise<T> {
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
-        const response = await axios.post<T>(url, body, { headers });
+        const response = await axios.request<T>({
+          method,
+          url,
+          headers,
+          data: body,
+        });
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error)) {
           const status = error.response?.status;
 
           if (status === 401) {
-            throw new HttpException(
+            throw new UnauthorizedException(
               'Toggl API authentication failed. Please verify your api_token in service_config.',
-              HttpStatus.UNAUTHORIZED,
             );
           }
 
@@ -175,16 +227,14 @@ export class TogglClientService {
           }
 
           if (status && status >= 500) {
-            throw new HttpException(
+            throw new BadGatewayException(
               `Toggl API server error: ${status}`,
-              HttpStatus.BAD_GATEWAY,
             );
           }
         }
 
-        throw new HttpException(
+        throw new BadGatewayException(
           'Failed to communicate with Toggl API.',
-          HttpStatus.BAD_GATEWAY,
         );
       }
     }
@@ -204,20 +254,20 @@ export class TogglClientService {
   private parseResponse(response: TogglSummaryResponse): TogglMonthSummary[] {
     return response.groups
       .filter((group) => group.id !== null)
-      .map((group) => {
-        const summary = new TogglMonthSummary();
-        summary.clientId = group.id as number;
-        summary.projects = group.sub_groups.map((subGroup) => {
-          const project = new TogglProjectSummary();
-          project.projectId = subGroup.id ?? 0;
-          project.projectName = subGroup.title;
-          project.totalSeconds = subGroup.seconds;
-          project.totalHours =
-            Math.round((subGroup.seconds / 3600) * 100) / 100;
-          return project;
-        });
-        return summary;
-      });
+      .map(
+        (group): TogglMonthSummary => ({
+          clientId: group.id as number,
+          projects: group.sub_groups.map(
+            (subGroup): TogglProjectSummary => ({
+              projectId: subGroup.id ?? 0,
+              projectName: subGroup.title,
+              totalSeconds: subGroup.seconds,
+              totalHours:
+                Math.round((subGroup.seconds / 3600) * 100) / 100,
+            }),
+          ),
+        }),
+      );
   }
 
   /**

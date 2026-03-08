@@ -22,28 +22,28 @@ export enum InvoiceStatus {
 @Unique(['clientMappingId', 'periodYear', 'periodMonth'])
 export class InvoiceLog {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ type: 'uuid', nullable: false })
-  clientMappingId: string;
+  clientMappingId!: string;
 
   @Column({ type: 'smallint', nullable: false })
-  periodYear: number;
+  periodYear!: number;
 
   @Column({ type: 'smallint', nullable: false })
-  periodMonth: number;
+  periodMonth!: number;
 
   @Column({ type: 'bigint', nullable: true })
-  fakturoidInvoiceId: string | null;
+  fakturoidInvoiceId!: string | null;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
-  fakturoidNumber: string | null;
+  fakturoidNumber!: string | null;
 
   @Column({ type: 'decimal', precision: 8, scale: 2, nullable: false })
-  totalHours: string;
+  totalHours!: string;
 
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: false })
-  totalAmount: string;
+  totalAmount!: string;
 
   @Column({
     type: 'enum',
@@ -51,16 +51,16 @@ export class InvoiceLog {
     default: InvoiceStatus.PENDING,
     nullable: false,
   })
-  status: InvoiceStatus;
+  status!: InvoiceStatus;
 
   @Column({ type: 'text', nullable: true })
-  errorMessage: string | null;
+  errorMessage!: string | null;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @ManyToOne(
     () => ClientMapping,
@@ -70,5 +70,5 @@ export class InvoiceLog {
     },
   )
   @JoinColumn({ name: 'clientMappingId' })
-  clientMapping: ClientMapping;
+  clientMapping!: ClientMapping;
 }

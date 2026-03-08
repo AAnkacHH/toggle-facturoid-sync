@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { ClientMapping } from '../entities/client-mapping.entity';
@@ -13,6 +17,11 @@ import {
   ClientPreview,
 } from '../dto/invoice-result.dto';
 import { FakturoidInvoiceLine } from '../dto/fakturoid-invoice.dto';
+import {
+  INVOICE_DEFAULTS,
+  SERVICE_NAMES,
+  FAKTUROID_CONFIG_KEYS,
+} from '../constants';
 
 @Injectable()
 export class InvoicingService {
@@ -220,7 +229,12 @@ export class InvoicingService {
       });
     }
 
-    return { year, month, clients };
+    const grandTotal = {
+      hours: clients.reduce((sum, c) => sum + c.totalHours, 0),
+      amount: clients.reduce((sum, c) => sum + c.totalAmount, 0),
+    };
+
+    return { year, month, clients, grandTotal };
   }
 
   /**
@@ -290,7 +304,7 @@ export class InvoicingService {
     const lines: FakturoidInvoiceLine[] = timeReports.map((tr) => ({
       name: tr.projectName,
       quantity: parseFloat(tr.totalHours),
-      unit_name: 'hod',
+      unit_name: INVOICE_DEFAULTS.UNIT_NAME,
       unit_price: parseFloat(mapping.hourlyRate),
     }));
 
@@ -315,7 +329,7 @@ export class InvoicingService {
     try {
       const response = await this.fakturoidClient.createInvoice(slug, {
         subject_id: Number(mapping.fakturoidSubjectId),
-        payment_method: 'bank',
+        payment_method: INVOICE_DEFAULTS.PAYMENT_METHOD,
         currency: mapping.currency,
         lines,
       });
@@ -366,16 +380,16 @@ export class InvoicingService {
   /**
    * Retrieves the Fakturoid account slug from service_config.
    */
-  private async getFakturoidSlug(): Promise<string> {
+  async getFakturoidSlug(): Promise<string> {
     const config = await this.serviceConfigRepo.findOne({
       where: {
-        serviceName: 'fakturoid',
-        configKey: 'slug',
+        serviceName: SERVICE_NAMES.FAKTUROID,
+        configKey: FAKTUROID_CONFIG_KEYS.SLUG,
       },
     });
 
     if (!config?.plainValue) {
-      throw new Error(
+      throw new InternalServerErrorException(
         'Fakturoid slug not found in service_config. Please configure slug for the fakturoid service.',
       );
     }

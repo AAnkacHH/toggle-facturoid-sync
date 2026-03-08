@@ -13,6 +13,7 @@ import { ServiceConfigService } from './services/service-config.service';
 import { ServiceConfigController } from './controllers/service-config.controller';
 import { ClientMappingController } from './controllers/client-mapping.controller';
 import { InvoicingController } from './controllers/invoicing.controller';
+import { ClientMappingService } from './services/client-mapping.service';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { InvoicingController } from './controllers/invoicing.controller';
     InvoicingService,
     InvoiceCronService,
     ServiceConfigService,
+    ClientMappingService,
   ],
   exports: [
     TypeOrmModule,

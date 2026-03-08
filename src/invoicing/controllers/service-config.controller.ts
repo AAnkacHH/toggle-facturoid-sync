@@ -13,7 +13,7 @@ import { ServiceConfigService } from '../services/service-config.service';
 import { CreateServiceConfigDto } from '../dto/create-service-config.dto';
 import { UpdateServiceConfigDto } from '../dto/update-service-config.dto';
 
-@Controller('api/service-config')
+@Controller('api/invoicing/config')
 export class ServiceConfigController {
   constructor(private readonly serviceConfigService: ServiceConfigService) {}
 
