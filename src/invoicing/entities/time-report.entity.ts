@@ -87,6 +87,6 @@ export class TimeReport {
       onDelete: 'CASCADE',
     },
   )
-  @JoinColumn({ name: 'clientMappingId' })
+  @JoinColumn({ name: 'client_mapping_id' })
   clientMapping!: ClientMapping;
 }

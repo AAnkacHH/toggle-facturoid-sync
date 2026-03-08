@@ -5,6 +5,8 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const databaseUrl = process.env.DATABASE_URL;
+const isSsl = process.env.DB_SSL === 'true';
+const sslConfig = isSsl ? { rejectUnauthorized: false } : false;
 
 export default new DataSource({
   type: 'postgres',
@@ -17,6 +19,7 @@ export default new DataSource({
         username: process.env.DB_USER ?? 'postgres',
         password: process.env.DB_PASSWORD,
       }),
+  ssl: sslConfig,
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   migrations: [__dirname + '/../migrations/*{.ts,.js}'],
   namingStrategy: new SnakeNamingStrategy(),
