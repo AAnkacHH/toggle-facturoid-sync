@@ -198,9 +198,7 @@ describe('InvoicingController', () => {
 
   describe('getTogglClients', () => {
     it('should return toggl clients', async () => {
-      const clients = [
-        { id: 1, name: 'Client A', wid: 999, archived: false },
-      ];
+      const clients = [{ id: 1, name: 'Client A', wid: 999, archived: false }];
       togglClient.getClients.mockResolvedValue(clients);
 
       const result = await controller.getTogglClients();

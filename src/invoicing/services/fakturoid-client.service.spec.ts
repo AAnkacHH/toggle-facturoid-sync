@@ -452,7 +452,11 @@ describe('FakturoidClientService', () => {
 
       // All requests return 429
       mockedAxios.request.mockRejectedValue(
-        createAxiosLikeError(429, { error: 'rate limited' }, { 'retry-after': '0' }),
+        createAxiosLikeError(
+          429,
+          { error: 'rate limited' },
+          { 'retry-after': '0' },
+        ),
       );
 
       await expect(service.getInvoice('test-slug', 1)).rejects.toThrow(
@@ -560,7 +564,14 @@ describe('FakturoidClientService', () => {
     it('should cache credentials and not query DB on subsequent calls', async () => {
       mockedAxios.post.mockResolvedValueOnce(mockTokenResponse('test-token'));
       mockedAxios.request.mockResolvedValueOnce({
-        data: { id: 1, number: '2026-0001', total: '100', status: 'open', subject_id: 1, html_url: '' },
+        data: {
+          id: 1,
+          number: '2026-0001',
+          total: '100',
+          status: 'open',
+          subject_id: 1,
+          html_url: '',
+        },
         status: 200,
         statusText: 'OK',
         headers: {},
@@ -575,7 +586,14 @@ describe('FakturoidClientService', () => {
 
       // Second request should use cached credentials
       mockedAxios.request.mockResolvedValueOnce({
-        data: { id: 2, number: '2026-0002', total: '200', status: 'open', subject_id: 2, html_url: '' },
+        data: {
+          id: 2,
+          number: '2026-0002',
+          total: '200',
+          status: 'open',
+          subject_id: 2,
+          html_url: '',
+        },
         status: 200,
         statusText: 'OK',
         headers: {},

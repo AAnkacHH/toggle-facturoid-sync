@@ -56,7 +56,9 @@ export class AuthGuard implements CanActivate {
     try {
       decoded = Buffer.from(base64, 'base64').toString('utf8');
     } catch {
-      throw new UnauthorizedException('Invalid base64 in Authorization header.');
+      throw new UnauthorizedException(
+        'Invalid base64 in Authorization header.',
+      );
     }
 
     const colonIndex = decoded.indexOf(':');

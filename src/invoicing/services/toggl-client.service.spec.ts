@@ -457,9 +457,7 @@ describe('TogglClientService', () => {
     it('should throw UnauthorizedException on 401', async () => {
       mockedRequest.mockRejectedValueOnce(createAxiosError(401));
 
-      await expect(service.getClients()).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(service.getClients()).rejects.toThrow(UnauthorizedException);
     });
   });
 
@@ -530,9 +528,7 @@ describe('TogglClientService', () => {
     it('should throw BadGatewayException on 5xx', async () => {
       mockedRequest.mockRejectedValueOnce(createAxiosError(500));
 
-      await expect(service.getProjects()).rejects.toThrow(
-        BadGatewayException,
-      );
+      await expect(service.getProjects()).rejects.toThrow(BadGatewayException);
     });
   });
 });

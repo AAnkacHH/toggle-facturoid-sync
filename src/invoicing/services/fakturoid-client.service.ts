@@ -149,9 +149,7 @@ export class FakturoidClientService {
     return this.cachedCredentials;
   }
 
-  async authenticate(
-    credentials?: FakturoidCredentials,
-  ): Promise<string> {
+  async authenticate(credentials?: FakturoidCredentials): Promise<string> {
     // Return cached token if still valid (with 5 minute buffer)
     if (this.accessToken && this.tokenExpiresAt) {
       const now = new Date();

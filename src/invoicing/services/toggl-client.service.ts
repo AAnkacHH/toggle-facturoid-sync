@@ -227,15 +227,11 @@ export class TogglClientService {
           }
 
           if (status && status >= 500) {
-            throw new BadGatewayException(
-              `Toggl API server error: ${status}`,
-            );
+            throw new BadGatewayException(`Toggl API server error: ${status}`);
           }
         }
 
-        throw new BadGatewayException(
-          'Failed to communicate with Toggl API.',
-        );
+        throw new BadGatewayException('Failed to communicate with Toggl API.');
       }
     }
 
@@ -262,8 +258,7 @@ export class TogglClientService {
               projectId: subGroup.id ?? 0,
               projectName: subGroup.title,
               totalSeconds: subGroup.seconds,
-              totalHours:
-                Math.round((subGroup.seconds / 3600) * 100) / 100,
+              totalHours: Math.round((subGroup.seconds / 3600) * 100) / 100,
             }),
           ),
         }),
