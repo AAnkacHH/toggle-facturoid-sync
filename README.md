@@ -1,98 +1,176 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Toggl-Fakturoid Sync
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Automated invoicing service that pulls time tracking data from Toggl Track and creates draft invoices in Fakturoid.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![NestJS](https://img.shields.io/badge/NestJS-11-red?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## Description
+---
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Features
 
-## Project setup
+- **Automated invoicing** -- fetches hours from Toggl, creates draft invoices in Fakturoid
+- **Scheduled execution** -- cron job runs on the 1st of every month at 08:00
+- **Manual trigger** -- generate invoices for any month via REST API
+- **Preview mode** -- review what invoices would be created before generating
+- **Duplicate protection** -- prevents double invoicing per client per month
+- **Encrypted credentials** -- API keys stored with AES-256-GCM encryption in the database
+- **Multi-client support** -- configure multiple Toggl clients with individual hourly rates
+- **Error isolation** -- one client's failure does not block others
+- **Retry logic** -- exponential backoff for Toggl/Fakturoid API rate limits
 
-```bash
-$ pnpm install
-```
+## Quick Start
 
-## Compile and run the project
+### Prerequisites
+
+- Node.js >= 18
+- pnpm >= 8
+- PostgreSQL >= 14
+
+### Setup
 
 ```bash
-# development
-$ pnpm run start
+# Clone the repository
+git clone https://github.com/your-username/toggl-facturoid-sync.git
+cd toggl-facturoid-sync
 
-# watch mode
-$ pnpm run start:dev
+# Install dependencies
+pnpm install
 
-# production mode
-$ pnpm run start:prod
+# Configure environment
+cp .env.example .env
+# Edit .env with your DATABASE_URL and ENCRYPTION_KEY
+
+# Start in development mode
+pnpm run start:dev
 ```
 
-## Run tests
+### Initial Configuration
 
 ```bash
-# unit tests
-$ pnpm run test
+# 1. Generate API secret (one-time setup)
+curl -X POST http://localhost:3000/api/auth/setup
+# Save the returned secret!
 
-# e2e tests
-$ pnpm run test:e2e
+# 2. Configure Toggl and Fakturoid credentials via the API
+# See docs/configuration.md for detailed steps
 
-# test coverage
-$ pnpm run test:cov
+# 3. Create client mappings
+# 4. Generate invoices
+curl -X POST http://localhost:3000/api/invoicing/generate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Basic $(echo -n 'admin:YOUR_SECRET' | base64)" \
+  -d '{"year": 2026, "month": 2}'
 ```
 
-## Deployment
+## Tech Stack
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+| Component     | Technology                        |
+|---------------|-----------------------------------|
+| Language      | TypeScript (strict mode)          |
+| Framework     | NestJS 11                         |
+| ORM           | TypeORM                           |
+| Database      | PostgreSQL                        |
+| Scheduling    | @nestjs/schedule (cron)           |
+| HTTP Client   | Axios                             |
+| Encryption    | AES-256-GCM (Node.js crypto)     |
+| Validation    | class-validator + class-transformer |
+| Package Mgr   | pnpm                              |
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## API Overview
+
+| Method | Endpoint                             | Description                        |
+|--------|--------------------------------------|------------------------------------|
+| POST   | `/api/auth/setup`                    | One-time API secret generation     |
+| GET    | `/api/auth/status`                   | Check if setup is complete         |
+| POST   | `/api/invoicing/config`              | Create service config entry        |
+| GET    | `/api/invoicing/config`              | List all config entries            |
+| POST   | `/api/invoicing/clients`             | Create client mapping              |
+| GET    | `/api/invoicing/clients`             | List client mappings               |
+| POST   | `/api/invoicing/generate`            | Generate invoices for a month      |
+| GET    | `/api/invoicing/preview/:year/:month`| Preview invoices before generation |
+| POST   | `/api/invoicing/reports/fetch`       | Fetch time reports from Toggl      |
+| GET    | `/api/invoicing/time-reports`        | List stored time reports           |
+| GET    | `/api/invoicing/invoice-logs`        | List invoice generation logs       |
+| GET    | `/api/invoicing/toggl/clients`       | Proxy: list Toggl clients          |
+| GET    | `/api/invoicing/toggl/projects`      | Proxy: list Toggl projects         |
+| GET    | `/api/invoicing/fakturoid/subjects`  | Proxy: list Fakturoid subjects     |
+
+See [docs/api.md](docs/api.md) for the full API reference with request/response examples.
+
+## Project Structure
+
+```
+src/
+  app.module.ts                     # Root module
+  main.ts                           # Application entry point
+  auth/
+    auth.controller.ts              # Auth endpoints (setup, status)
+    auth.service.ts                 # Secret generation and validation
+    auth.guard.ts                   # Global HTTP Basic Auth guard
+    auth.module.ts
+  config/
+    database.config.ts              # TypeORM connection config
+    datasource.ts                   # CLI migration datasource
+  invoicing/
+    invoicing.module.ts             # Invoicing feature module
+    constants.ts                    # Service names, config keys, defaults
+    controllers/
+      service-config.controller.ts  # CRUD for service_config
+      client-mapping.controller.ts  # CRUD for client_mapping
+      invoicing.controller.ts       # Generation, preview, reports, proxy
+    services/
+      encryption.service.ts         # AES-256-GCM encrypt/decrypt
+      service-config.service.ts     # Config CRUD with secret masking
+      client-mapping.service.ts     # Client mapping CRUD
+      toggl-client.service.ts       # Toggl API client with retry
+      fakturoid-client.service.ts   # Fakturoid API client with OAuth
+      invoicing.service.ts          # Invoice generation orchestrator
+      invoice-cron.service.ts       # Monthly cron job with retry
+    entities/
+      service-config.entity.ts      # Encrypted credentials storage
+      client-mapping.entity.ts      # Toggl <-> Fakturoid mapping
+      time-report.entity.ts         # Stored time data
+      invoice-log.entity.ts         # Invoice creation records
+    dto/                            # Request/response type definitions
+```
+
+## Development
 
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+pnpm run start:dev    # Start dev server with hot reload
+pnpm run build        # Compile TypeScript to dist/
+pnpm run test         # Run unit tests
+pnpm run test:e2e     # Run end-to-end tests
+pnpm run test:cov     # Run tests with coverage report
+pnpm run lint         # Run ESLint with auto-fix
+pnpm run format       # Format code with Prettier
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Database migrations
 
-## Resources
+```bash
+pnpm run migration:generate src/migrations/MigrationName  # Generate from entity changes
+pnpm run migration:run                                     # Apply pending migrations
+pnpm run migration:revert                                  # Revert last migration
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+## Documentation
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+| Document                                   | Description                              |
+|--------------------------------------------|------------------------------------------|
+| [API Reference](docs/api.md)              | Full REST API with examples              |
+| [Configuration](docs/configuration.md)    | Environment, credentials, client mappings|
+| [Architecture](docs/architecture.md)      | System design, data flow, security model |
+| [Deployment](docs/deployment.md)          | Docker, manual setup, migrations         |
+| [Contributing](CONTRIBUTING.md)           | Development setup and guidelines         |
 
-## Support
+## Contributing
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+This project is licensed under the [MIT License](LICENSE).
